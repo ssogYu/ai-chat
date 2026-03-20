@@ -12,7 +12,11 @@ import { useChatStore } from "@/stores/chatStore";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
 
-export function ChatInput() {
+interface ChatInputProps {
+  showBorder?: boolean;
+}
+
+export function ChatInput({ showBorder = true }: ChatInputProps) {
   const [input, setInput] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -121,7 +125,12 @@ export function ChatInput() {
   };
 
   return (
-    <div className="border-t border-border bg-background p-4">
+    <div
+      className={cn(
+        "bg-background p-4",
+        showBorder && "border-t border-border",
+      )}
+    >
       {attachedFiles.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {attachedFiles.map((file, index) => {
