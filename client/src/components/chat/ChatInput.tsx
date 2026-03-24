@@ -25,13 +25,10 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
   const {
     webSearchEnabled,
     attachedFiles,
-    currentSessionId,
-    createSession,
-    addMessage,
+    toggleWebSearch,
     addAttachedFile,
     removeAttachedFile,
-    clearAttachedFiles,
-    toggleWebSearch,
+    chat,
   } = useChatStore();
 
   const adjustHeight = useCallback(() => {
@@ -46,37 +43,14 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
     adjustHeight();
   }, [input, adjustHeight]);
 
-  const handleSubmit = () => {
-    if (!input.trim() && attachedFiles.length === 0) return;
-
-    let sessionId = currentSessionId;
-    if (!sessionId) {
-      sessionId = createSession();
-    }
-
-    addMessage({
-      role: "user",
-      content: input.trim(),
-      parentId: null,
-    });
-
+  const handleSubmit = async () => {
+    const reader = await chat(input);
     setInput("");
-    clearAttachedFiles();
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-
-    setTimeout(() => {
-      addMessage({
-        role: "assistant",
-        content: "",
-        parentId: null,
-        isStreaming: true,
-        isThinking: true,
-        thinkingContent: "正在分析您的问题...",
-      });
-    }, 500);
+    // if (!input.trim() && attachedFiles.length === 0) return;
+    // setInput("");
+    // if (textareaRef.current) {
+    //   textareaRef.current.style.height = "auto";
+    // }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

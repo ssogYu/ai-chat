@@ -8,15 +8,13 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Icons } from "@/components/ui/Icons";
 
 export function ChatPage() {
-  const { isSidebarOpen, toggleSidebar, toggleArtifacts, messages } =
-    useChatStore();
+  const { isSidebarOpen, toggleSidebar, requestMessages } = useChatStore();
 
-  const hasMessages = messages.length > 0;
+  const hasMessages = requestMessages.length > 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar />
-
       <div className="flex flex-1 flex-col">
         <header className="flex h-14 items-center justify-between border-b border-border px-4">
           <div className="flex items-center gap-2">
@@ -32,12 +30,6 @@ export function ChatPage() {
 
           <div className="flex items-center gap-1">
             <ThemeToggle />
-            {/* <button
-              onClick={() => toggleArtifacts()}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              <Icons.code className="h-4 w-4" />
-            </button> */}
           </div>
         </header>
 
@@ -67,8 +59,6 @@ export function ChatPage() {
               </div>
             )}
           </div>
-
-          {/* <ArtifactsPanel /> */}
         </main>
       </div>
     </div>
