@@ -5,7 +5,7 @@ import { useChatStore } from "@/stores/chatStore";
 import { MessageBubble } from "./MessageBubble";
 
 export function MessageList() {
-  const { requestMessages } = useChatStore();
+  const { chatMessage } = useChatStore();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
@@ -14,7 +14,7 @@ export function MessageList() {
     if (!userScrolledRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [requestMessages]);
+  }, [chatMessage]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -29,14 +29,14 @@ export function MessageList() {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  if (requestMessages.length === 0) {
+  if (chatMessage.length === 0) {
     return null;
   }
 
   return (
     <div ref={containerRef} className="h-full overflow-y-auto px-4">
       <div className="mx-auto max-w-4xl py-6">
-        {requestMessages.map((message, index) => (
+        {chatMessage.map((message, index) => (
           <MessageBubble key={index} message={message} />
         ))}
         <div ref={messagesEndRef} />

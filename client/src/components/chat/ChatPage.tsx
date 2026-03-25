@@ -8,9 +8,9 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Icons } from "@/components/ui/Icons";
 
 export function ChatPage() {
-  const { isSidebarOpen, toggleSidebar, requestMessages } = useChatStore();
+  const { isSidebarOpen, toggleSidebar, chatMessage } = useChatStore();
 
-  const hasMessages = requestMessages.length > 0;
+  const hasMessages = chatMessage.length > 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

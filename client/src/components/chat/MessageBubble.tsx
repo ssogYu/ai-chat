@@ -1,47 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { RequestMessage } from "@/stores/chatStore";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
+import { UnifiedMessage } from "@/types";
 
 interface MessageBubbleProps {
-  message: RequestMessage;
-}
-
-function CitationBadge({
-  citation,
-}: {
-  citation: { id: number; title: string; url: string };
-}) {
-  const [showTooltip, setShowTooltip] = useState(false);
-
-  return (
-    <span
-      className="relative inline-flex"
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
-      <a
-        href={citation.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-0.5 rounded bg-accent px-1.5 py-0.5 text-xs font-medium text-accent-foreground no-underline transition-colors hover:bg-accent-hover"
-      >
-        [{citation.id}]
-      </a>
-      {showTooltip && (
-        <span className="absolute bottom-full left-0 z-50 mb-2 max-w-xs animate-fade-in rounded-lg border border-border bg-card px-3 py-2 text-xs text-foreground shadow-lg">
-          <span className="font-medium">{citation.title}</span>
-        </span>
-      )}
-    </span>
-  );
+  message: UnifiedMessage;
 }
 
 function ThinkingBlock({ content }: { content: string }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
+  const [isExpanded, setIsExpanded] = useState(true);
   return (
     <div className="mb-3 overflow-hidden rounded-lg border border-border bg-secondary">
       <button
@@ -139,7 +108,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(message?.parts?.[0]?.text);
+    await navigator.clipboard.writeText(message?.content || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -167,9 +136,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
 
       <div className={cn("flex-1", isUser && "flex flex-col items-end")}>
-        {/* {message.isThinking && message.thinkingContent && (
-          <ThinkingBlock content={message.thinkingContent} />
-        )} */}
+        {message.thinkingContent && (
+          <ThinkingBlock content={message?.thinkingContent || ""} />
+        )}
 
         <div
           className={cn(
@@ -179,25 +148,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               : "bg-chat-assistant-bg text-chat-assistant-foreground",
           )}
         >
-          {false ? (
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:0ms]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:150ms]" />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:300ms]" />
-              </div>
-            </div>
-          ) : (
-            <MessageContent content={message?.parts?.[0]?.text} />
-          )}
-
-          {/* {message.citations && message.citations.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {message.citations.map((citation) => (
-                <CitationBadge key={citation.id} citation={citation} />
-              ))}
-            </div>
-          )} */}
+          <MessageContent content={message?.content || ""} />
         </div>
 
         <div

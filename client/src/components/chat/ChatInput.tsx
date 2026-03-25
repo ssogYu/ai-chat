@@ -44,17 +44,21 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
   }, [input, adjustHeight]);
 
   const handleSubmit = async () => {
-    const reader = await chat(input);
-    setInput("");
-    // if (!input.trim() && attachedFiles.length === 0) return;
-    // setInput("");
-    // if (textareaRef.current) {
-    //   textareaRef.current.style.height = "auto";
-    // }
+    if (!input.trim() && attachedFiles.length === 0) return;
+    try {
+      const reader = await chat(input);
+      setInput("");
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    } catch (error) {
+      setInput("");
+      console.error(error);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -147,8 +151,16 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
             </div>
           </div>
         )}
-
-        <div className="flex items-end gap-2 p-3">
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="输入消息... (⌘ + Enter 发送)"
+          rows={1}
+          className="p-3 pt-4 w-full max-h-[200px] min-h-[40px] flex-1 resize-none bg-transparent py-2 text-foreground placeholder:text-foreground-muted focus:outline-none"
+        />
+        <div className="flex gap-2 p-3 pt-0 justify-between">
           <div className="flex items-center gap-1">
             <input
               ref={fileInputRef}
@@ -180,17 +192,6 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
               <span className="hidden sm:inline">联网搜索</span>
             </button>
           </div>
-
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="输入消息... (⌘ + Enter 发送)"
-            rows={1}
-            className="max-h-[200px] min-h-[40px] flex-1 resize-none bg-transparent py-2 text-foreground placeholder:text-foreground-muted focus:outline-none"
-          />
-
           <button
             onClick={handleSubmit}
             disabled={!input.trim() && attachedFiles.length === 0}
