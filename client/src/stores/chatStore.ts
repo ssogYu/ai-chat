@@ -45,6 +45,7 @@ interface ChatStore {
   attachedFiles: File[];
   chatLoading: boolean;
 
+  //Actions
   chat: (input: string) => Promise<unknown>;
 
   toggleSidebar: () => void;
