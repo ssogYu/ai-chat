@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
 import { UnifiedMessage } from "@/types";
+import { MarkdownRenderer } from "./MarkdownRenderer";
 
 interface MessageBubbleProps {
   message: UnifiedMessage;
@@ -28,76 +29,9 @@ function ThinkingBlock({ content }: { content: string }) {
       </button>
       {isExpanded && (
         <div className="border-t border-border px-3 py-2 text-sm text-foreground-muted">
-          {content}
+          <MarkdownRenderer content={content} />
         </div>
       )}
-    </div>
-  );
-}
-
-function CodeBlock({ code, language }: { code: string; language?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="my-3 overflow-hidden rounded-lg border border-code-border bg-code-bg">
-      <div className="flex items-center justify-between border-b border-code-border px-3 py-2">
-        <span className="text-xs font-medium text-foreground-muted">
-          {language || "code"}
-        </span>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 rounded px-2 py-1 text-xs text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          {copied ? (
-            <>
-              <Icons.check className="h-3 w-3" />
-              已复制
-            </>
-          ) : (
-            <>
-              <Icons.copy className="h-3 w-3" />
-              复制
-            </>
-          )}
-        </button>
-      </div>
-      <pre className="overflow-x-auto p-3">
-        <code className="font-mono text-sm text-foreground">{code}</code>
-      </pre>
-    </div>
-  );
-}
-
-function MessageContent({ content }: { content: string }) {
-  const parts = content.split(/(```[\s\S]*?```)/g);
-
-  return (
-    <div className="prose prose-sm max-w-none dark:prose-invert">
-      {parts.map((part, index) => {
-        if (part.startsWith("```")) {
-          const match = part.match(/```(\w+)?\n?([\s\S]*?)```/);
-          if (match) {
-            return (
-              <CodeBlock
-                key={index}
-                language={match[1]}
-                code={match[2].trim()}
-              />
-            );
-          }
-        }
-        return (
-          <span key={index} className="whitespace-pre-wrap">
-            {part}
-          </span>
-        );
-      })}
     </div>
   );
 }
@@ -148,7 +82,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               : "bg-chat-assistant-bg text-chat-assistant-foreground",
           )}
         >
-          <MessageContent content={message?.content || ""} />
+          <MarkdownRenderer content={message?.content || ""} />
         </div>
 
         <div

@@ -51,11 +51,7 @@ interface SessionItemProps {
   onSelect: () => void;
 }
 
-function SessionItem({
-  session,
-  isActive,
-  onSelect,
-}: SessionItemProps) {
+function SessionItem({ session, isActive, onSelect }: SessionItemProps) {
   return (
     <div
       className={cn(
@@ -73,12 +69,8 @@ function SessionItem({
 }
 
 export function Sidebar() {
-  const {
-    sessions,
-    currentSessionId,
-    isSidebarOpen,
-    setSidebarOpen,
-  } = useChatStore();
+  const { sessions, currentSessionId, isSidebarOpen, setSidebarOpen } =
+    useChatStore();
 
   const groupedSessions = groupSessionsByDate(sessions);
 

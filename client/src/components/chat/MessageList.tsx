@@ -34,7 +34,10 @@ export function MessageList() {
   }
 
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto px-4">
+    <div
+      ref={containerRef}
+      className="h-full overflow-y-auto px-4 overflow-x-hidden"
+    >
       <div className="mx-auto max-w-4xl py-6">
         {chatMessage.map((message, index) => (
           <MessageBubble key={index} message={message} />
