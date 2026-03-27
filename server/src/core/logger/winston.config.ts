@@ -70,6 +70,7 @@ export const createWinstonConfig = (configService: ConfigService) => {
       // B. 业务常规日志 (info, warn 等)
       new DailyRotateFile({
         ...dailyRotateOptions,
+        dirname: 'logs/info',
         level: 'info',
         filename: 'app/app-%DATE%.log',
         maxFiles: '14d', // 常规日志保留 14 天
@@ -78,6 +79,7 @@ export const createWinstonConfig = (configService: ConfigService) => {
       // C. 专门的错误日志提取 (仅 error，方便线上配置报警规则)
       new DailyRotateFile({
         ...dailyRotateOptions,
+        dirname: 'logs/error',
         level: 'error',
         filename: 'error/error-%DATE%.log',
         maxFiles: '30d', // 错误日志极具排查价值，保留 30 天

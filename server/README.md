@@ -1,8 +1,9 @@
 #### nest template 快速创建
 
 ```bash
-nest g controller user --no-spec
-nest g service user --no-spec
+nest g controller modules/user --no-spec
+nest g service modules/user --no-spec
+nest g module modules/user --no-spec
 ```
 
 #### 中间件接入

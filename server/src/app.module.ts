@@ -7,9 +7,10 @@ import {
 import { ConfigModule } from './core/config/config.module';
 import { LoggerMiddleware } from './common/middlewares';
 import { LoggerModule } from './core/logger/logger.module';
+import { UserModule } from './module/user/user.module';
 
 @Module({
-  imports: [ConfigModule, LoggerModule],
+  imports: [ConfigModule, LoggerModule, UserModule],
   controllers: [],
   providers: [],
 })
