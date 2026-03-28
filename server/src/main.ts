@@ -1,17 +1,64 @@
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { WinstonLoggerService } from './core/logger/winston.server';
 
 async function bootstrap() {
-  // 启用日志缓冲，避免在生产环境中直接打印到控制台
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
   });
-  // 获取自定义的 Logger 实例
-  // 替换 NestJS 默认的系统 Logger
   const customLogger = app.get(WinstonLoggerService);
-  app.useLogger(customLogger);
+  const configService = app.get(ConfigService);
 
-  await app.listen(process.env.PORT ?? 3000);
+  app.useLogger(customLogger);
+  app.use(helmet());
+  app.enableCors({
+    origin: configService.getOrThrow<string>('CORS_ORIGIN'),
+    credentials: true,
+  });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('AI Chat Server API')
+    .setDescription('基于 NestJS + Prisma + PostgreSQL + JWT 的认证接口文档')
+    .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: '访问令牌',
+      },
+      'access-token',
+    )
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: '刷新令牌',
+      },
+      'refresh-token',
+    )
+    .build();
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+
+  SwaggerModule.setup('docs', app, swaggerDocument, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
+  await app.listen(configService.get<number>('PORT', 3000));
 }
+
 void bootstrap();

@@ -1,5 +1,6 @@
 export interface defaultConfg {
   baseUrl?: string;
+  corsOrigin?: string;
 }
 export type AppConfig = {
   nodeEnv: 'development' | 'production' | 'test';

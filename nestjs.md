@@ -12,7 +12,7 @@ my-nestjs-project/
 │ │ └── utils/ # 工具函数 (例如: 日期处理、加密解密)
 │ │
 │ ├── core/ # 核心模块目录 (仅在 AppModule 中导入一次)
-│ │ ├── core.module.ts # 核心模块定义
+│ │ ├── core.module.ts # v核心模块定义
 │ │ ├── config/ # 配置管理 (如: TypeORM配置、Redis配置)
 │ │ └── logger/ # 自定义全局日志模块
 │ │

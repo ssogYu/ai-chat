@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "AI Chat PostgreSQL",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "ai_chat",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
