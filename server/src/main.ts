@@ -21,9 +21,9 @@ async function bootstrap() {
   });
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      forbidNonWhitelisted: true,
+      whitelist: true, // 自动剔除 DTO 中未定义的多余字段
+      transform: true, // 自动转换 DTO 中的字段类型
+      forbidNonWhitelisted: true, // 禁止传递未定义的字段
     }),
   );
 

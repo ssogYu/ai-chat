@@ -10,6 +10,7 @@ model User {
   id               String    @id @default(cuid())
   email            String    @unique
   name             String?
+  avatar           String?
   passwordHash     String
   refreshTokenHash String?
   lastLoginAt      DateTime?

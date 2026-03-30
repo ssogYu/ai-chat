@@ -17,23 +17,6 @@ services:
       timeout: 5s
       retries: 10
 
-  pgadmin:
-    image: dpage/pgadmin4:9.2
-    container_name: ai-chat-pgadmin
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@aichat.dev
-      PGADMIN_DEFAULT_PASSWORD: admin123456
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-    ports:
-      - '5050:80'
-    volumes:
-      - pgadmin-data:/var/lib/pgadmin
-      - ./docker/pgadmin/servers.json:/pgadmin4/servers.json:ro
-
   server:
     build:
       context: .
@@ -50,4 +33,3 @@ services:
 
 volumes:
   postgres-data:
-  pgadmin-data:

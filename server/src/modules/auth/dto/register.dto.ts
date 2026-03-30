@@ -37,4 +37,13 @@ export class RegisterDto {
   @IsString()
   @MaxLength(50)
   name?: string;
+
+  @ApiPropertyOptional({
+    example: 'https://example.com/avatar.jpg',
+    description: '用户头像 URL，可选',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  avatar?: string;
 }

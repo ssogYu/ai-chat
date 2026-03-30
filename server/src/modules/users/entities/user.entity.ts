@@ -18,6 +18,12 @@ export class UserEntity {
   name!: string | null;
 
   @ApiPropertyOptional({
+    example: 'https://example.com/avatar.jpg',
+    nullable: true,
+  })
+  avatar!: string | null;
+
+  @ApiPropertyOptional({
     example: '2026-03-27T12:48:21.839Z',
     nullable: true,
   })
