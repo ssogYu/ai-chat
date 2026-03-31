@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
 import { validationSchema } from './env.validation';
-import appConfig from './app.config';
+import appConfig, { cookieConfig } from './app.config';
 
 @Global()
 @Module({
@@ -11,7 +11,7 @@ import appConfig from './app.config';
       envFilePath: [`.env.${process.env.NODE_ENV || 'development'}`, '.env'],
       isGlobal: true,
       // 加载所有配置分组
-      load: [appConfig],
+      load: [appConfig, cookieConfig],
       // 验证环境变量
       validationSchema,
       validationOptions: {

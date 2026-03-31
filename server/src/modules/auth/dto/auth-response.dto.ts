@@ -4,9 +4,6 @@ import { UserEntity } from '../../users/entities/user.entity';
 export class AuthTokensDto {
   @ApiProperty()
   accessToken!: string;
-
-  @ApiProperty()
-  refreshToken!: string;
 }
 
 export class AuthResponseDto {

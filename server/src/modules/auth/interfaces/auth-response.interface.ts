@@ -2,10 +2,15 @@ import { UserEntity } from '../../users/entities/user.entity';
 
 export interface AuthTokens {
   accessToken: string;
-  refreshToken: string;
+  refreshToken?: string;
 }
 
 export interface AuthResponse {
+  user: UserEntity;
+  tokens: { accessToken: string };
+}
+
+export interface AuthResult {
   user: UserEntity;
   tokens: AuthTokens;
 }

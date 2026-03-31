@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+// 用户实体
 export class UserEntity {
   @ApiProperty({
     example: 'cmn8wdb2n0000icxe06e2wzhg',

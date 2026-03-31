@@ -9,3 +9,12 @@ export type AppConfig = {
   isDevelopment: boolean;
   isTest: boolean;
 } & defaultConfg;
+
+export interface CookieConfig {
+  name: string;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: 'strict' | 'lax' | 'none';
+  path: string;
+  maxAge: number;
+}

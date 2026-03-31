@@ -11,7 +11,7 @@ import type { StringValue } from 'ms';
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { AuthResponse, AuthTokens } from './interfaces/auth-response.interface';
+import { AuthResult, AuthTokens } from './interfaces/auth-response.interface';
 import type { AuthUser } from './interfaces/auth-user.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
 
@@ -23,7 +23,7 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto): Promise<AuthResponse> {
+  async register(registerDto: RegisterDto): Promise<AuthResult> {
     const normalizedEmail = registerDto.email.trim().toLowerCase();
     const passwordHash = await this.hashValue(registerDto.password);
 
@@ -37,7 +37,7 @@ export class AuthService {
       const tokens = await this.issueTokens(user.id, user.email);
       await this.usersService.updateRefreshTokenHash(
         user.id,
-        await this.hashValue(tokens.refreshToken),
+        await this.hashValue(tokens.refreshToken!),
       );
 
       return {
@@ -56,7 +56,7 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto): Promise<AuthResponse> {
+  async login(loginDto: LoginDto): Promise<AuthResult> {
     const normalizedEmail = loginDto.email.trim().toLowerCase();
     const user = await this.usersService.findByEmail(normalizedEmail);
 
@@ -77,7 +77,7 @@ export class AuthService {
     await Promise.all([
       this.usersService.updateRefreshTokenHash(
         user.id,
-        await this.hashValue(tokens.refreshToken),
+        await this.hashValue(tokens.refreshToken!),
       ),
       this.usersService.updateLastLoginAt(user.id),
     ]);
@@ -88,7 +88,7 @@ export class AuthService {
     };
   }
 
-  async refreshTokens(currentUser: AuthUser): Promise<AuthResponse> {
+  async refreshTokens(currentUser: AuthUser): Promise<AuthResult> {
     if (!currentUser.refreshToken) {
       throw new UnauthorizedException('缺少刷新令牌');
     }
@@ -111,7 +111,7 @@ export class AuthService {
     const tokens = await this.issueTokens(user.id, user.email);
     await this.usersService.updateRefreshTokenHash(
       user.id,
-      await this.hashValue(tokens.refreshToken),
+      await this.hashValue(tokens.refreshToken!),
     );
 
     const refreshedUser = await this.usersService.findById(user.id);
