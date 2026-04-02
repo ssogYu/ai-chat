@@ -14,6 +14,10 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthResult, AuthTokens } from './interfaces/auth-response.interface';
 import type { AuthUser } from './interfaces/auth-user.interface';
 import type { TokenPayload } from './interfaces/token-payload.interface';
+import {
+  BadRequestApiException,
+  UnauthorizedApiException,
+} from 'src/common/exceptions/api.exception';
 
 @Injectable()
 export class AuthService {
@@ -49,7 +53,7 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2002'
       ) {
-        throw new ConflictException('邮箱已被注册');
+        throw new BadRequestApiException('邮箱已被注册');
       }
 
       throw error;
@@ -61,7 +65,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(normalizedEmail);
 
     if (!user) {
-      throw new UnauthorizedException('邮箱或密码错误');
+      throw new BadRequestApiException('邮箱或密码错误');
     }
 
     const passwordMatched = await bcrypt.compare(
@@ -70,7 +74,7 @@ export class AuthService {
     );
 
     if (!passwordMatched) {
-      throw new UnauthorizedException('邮箱或密码错误');
+      throw new BadRequestApiException('邮箱或密码错误');
     }
 
     const tokens = await this.issueTokens(user.id, user.email);
@@ -90,13 +94,13 @@ export class AuthService {
 
   async refreshTokens(currentUser: AuthUser): Promise<AuthResult> {
     if (!currentUser.refreshToken) {
-      throw new UnauthorizedException('缺少刷新令牌');
+      throw new UnauthorizedApiException('缺少刷新令牌');
     }
 
     const user = await this.usersService.findById(currentUser.sub);
 
     if (!user?.refreshTokenHash) {
-      throw new UnauthorizedException('刷新令牌无效');
+      throw new UnauthorizedApiException('刷新令牌无效');
     }
 
     const refreshTokenMatched = await bcrypt.compare(
@@ -105,7 +109,7 @@ export class AuthService {
     );
 
     if (!refreshTokenMatched) {
-      throw new UnauthorizedException('刷新令牌无效');
+      throw new UnauthorizedApiException('刷新令牌无效');
     }
 
     const tokens = await this.issueTokens(user.id, user.email);
@@ -117,7 +121,7 @@ export class AuthService {
     const refreshedUser = await this.usersService.findById(user.id);
 
     if (!refreshedUser) {
-      throw new UnauthorizedException('用户不存在');
+      throw new UnauthorizedApiException('用户不存在');
     }
 
     return {
@@ -126,9 +130,8 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string): Promise<{ success: true }> {
+  async logout(userId: string): Promise<void> {
     await this.usersService.updateRefreshTokenHash(userId, null);
-    return { success: true };
   }
 
   private async issueTokens(
