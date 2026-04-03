@@ -3,6 +3,20 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { User } from "@/types";
 import { authService } from "@/services/auth";
 
+const TOKEN_KEY = "ai_chat_token";
+
+function setTokenCookie(token: string) {
+  if (typeof document !== "undefined") {
+    document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=2592000; SameSite=Lax`;
+  }
+}
+
+function removeTokenCookie() {
+  if (typeof document !== "undefined") {
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+  }
+}
+
 interface AuthStore {
   user: User | null;
   isAuthenticated: boolean;
@@ -28,13 +42,16 @@ export const useAuthStore = create<AuthStore>()(
         set({ isLoading: true, error: null });
         try {
           const { data } = await authService.login({ email, password });
-          localStorage.setItem("ai_chat_token", data.tokens?.accessToken);
+          const token = data.tokens?.accessToken;
+          localStorage.setItem(TOKEN_KEY, token);
+          setTokenCookie(token);
           set({
             user: data.user,
             isAuthenticated: true,
             isLoading: false,
           });
         } catch (err: any) {
+          console.log("token11", err);
           set({ error: err?.message, isLoading: false });
           throw err;
         }
@@ -48,8 +65,9 @@ export const useAuthStore = create<AuthStore>()(
             password,
             name,
           });
-          console.log("data", data);
-          localStorage.setItem("ai_chat_token", data.tokens?.accessToken);
+          const token = data.tokens?.accessToken;
+          localStorage.setItem(TOKEN_KEY, token);
+          setTokenCookie(token);
           set({
             user: data.user,
             isAuthenticated: true,
@@ -63,18 +81,25 @@ export const useAuthStore = create<AuthStore>()(
 
       logout: async () => {
         await authService.logout();
-        localStorage.removeItem("ai_chat_token");
+        localStorage.removeItem(TOKEN_KEY);
+        removeTokenCookie();
         set({ user: null, isAuthenticated: false });
       },
 
       fetchUser: async () => {
-        const token = localStorage.getItem("access_token");
-        if (!token) return;
+        const token = localStorage.getItem(TOKEN_KEY);
+        if (!token) {
+          set({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
         set({ isLoading: true });
         try {
           const { data } = await authService.getMe();
           set({ user: data, isAuthenticated: true, isLoading: false });
         } catch (err: any) {
+          console.log("token112", token, err);
+          localStorage.removeItem(TOKEN_KEY);
+          removeTokenCookie();
           set({ user: null, isAuthenticated: false, isLoading: false });
         }
       },

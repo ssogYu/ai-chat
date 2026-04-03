@@ -77,12 +77,14 @@ export function AuthPage() {
     try {
       if (isLogin) {
         await login(formData.email, formData.password);
+        router.push("/");
       } else {
         await register(
           formData.email,
           formData.password,
           formData.name || undefined,
         );
+        router.push("/");
       }
     } catch {
       /* error is handled by store */
