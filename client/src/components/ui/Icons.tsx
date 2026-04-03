@@ -49,6 +49,7 @@ import {
   ArrowRight,
   Eye,
   EyeOff,
+  LogOut,
 } from "lucide-react";
 
 export const Icons = {
@@ -100,6 +101,7 @@ export const Icons = {
   arrowRight: ArrowRight,
   eye: Eye,
   eyeOff: EyeOff,
+  logout: LogOut,
 };
 
 export type IconName = keyof typeof Icons;

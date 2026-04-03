@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useChatStore, Session } from "@/stores/chatStore";
+import { useAuthStore } from "@/stores/authStore";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +73,22 @@ function SessionItem({ session, isActive, onSelect }: SessionItemProps) {
 export function Sidebar() {
   const { sessions, currentSessionId, isSidebarOpen, setSidebarOpen } =
     useChatStore();
+  const { user, logout } = useAuthStore();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const groupedSessions = groupSessionsByDate(sessions);
 
@@ -120,6 +138,49 @@ export function Sidebar() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="relative border-t border-sidebar-border p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-hover">
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name || "User"}
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              <Icons.user className="h-4 w-4 text-accent-foreground" />
+            )}
+          </div>
+          <div className="flex-1 truncate">
+            <p className="truncate text-sm font-medium text-foreground">
+              {user?.name || user?.email || "用户"}
+            </p>
+          </div>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+            >
+              <Icons.moreHorizontal className="h-4 w-4" />
+            </button>
+            {showDropdown && (
+              <div className="absolute bottom-full right-0 mb-2 w-40 rounded-lg border border-sidebar-border bg-sidebar shadow-lg">
+                <button
+                  onClick={() => {
+                    logout();
+                    setShowDropdown(false);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+                >
+                  <Icons.logout className="h-4 w-4" />
+                  退出登录
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   );
