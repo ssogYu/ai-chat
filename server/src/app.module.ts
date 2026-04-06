@@ -8,10 +8,11 @@ import { LoggerMiddleware } from './common/middlewares';
 import { CoreModule } from './core/core.module';
 import { PrismaModule } from './database/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
-  imports: [CoreModule, PrismaModule, AuthModule, UsersModule],
+  imports: [CoreModule, PrismaModule, AuthModule, UsersModule, ChatModule],
   controllers: [],
   providers: [],
 })

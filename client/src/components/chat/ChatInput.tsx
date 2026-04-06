@@ -46,8 +46,9 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
   const handleSubmit = async () => {
     if (!input.trim() && attachedFiles.length === 0) return;
     try {
-      const reader = await chat(input);
+      chat(input);
       setInput("");
+
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }

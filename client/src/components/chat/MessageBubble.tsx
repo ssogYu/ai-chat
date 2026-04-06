@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
-import { UnifiedMessage } from "@/types";
 import { MarkdownRenderer } from "./MarkdownRenderer";
+import { LlmMessage } from "@/types/chat";
 
 interface MessageBubbleProps {
-  message: UnifiedMessage;
+  message: LlmMessage;
 }
 
 function ThinkingBlock({ content }: { content: string }) {
@@ -70,9 +70,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
 
       <div className={cn("flex-1", isUser && "flex flex-col items-end")}>
-        {message.thinkingContent && (
+        {/* {message.thinkingContent && (
           <ThinkingBlock content={message?.thinkingContent || ""} />
-        )}
+        )} */}
 
         <div
           className={cn(

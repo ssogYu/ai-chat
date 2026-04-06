@@ -1,5 +1,5 @@
 import { chatService } from "@/services";
-import { UnifiedChatRequest, UnifiedMessage } from "@/types";
+import { chatStreanRequest, LlmMessage } from "@/types/chat";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 export interface RequestMessage {
@@ -34,8 +34,8 @@ export interface Artifact {
 interface ChatStore {
   sessions: Session[];
   currentSessionId: string | null;
-  message: UnifiedMessage[];
-  chatMessage: UnifiedMessage[];
+  message: LlmMessage[];
+  chatMessage: LlmMessage[];
   activeMessageId: string | null;
   artifacts: Artifact[];
   activeArtifactId: string | null;
@@ -44,9 +44,14 @@ interface ChatStore {
   webSearchEnabled: boolean;
   attachedFiles: File[];
   chatLoading: boolean;
+  chatError: string | null;
 
   //Actions
   chat: (input: string) => Promise<unknown>;
+  clearChatError: () => void;
+  toggleArtifacts: () => void;
+  setActiveArtifact: (artifactId: string | null) => void;
+  removeArtifact: (artifactId: string) => void;
 
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
@@ -73,60 +78,141 @@ export const useChatStore = create<ChatStore>()(
       webSearchEnabled: false,
       attachedFiles: [],
       chatLoading: false,
+      chatError: null,
 
       chat: async (input: string) => {
-        const { message } = getState();
-        const requestMessage: UnifiedMessage[] = [
+        const { message, chatLoading } = getState();
+        const trimmedInput = input.trim();
+
+        if (!trimmedInput || chatLoading) {
+          return;
+        }
+
+        const currentMessage: LlmMessage[] = [
           ...message,
-          { role: "user", content: input },
+          { role: "user", content: trimmedInput },
         ];
-        set({ message: requestMessage });
-        const requestMessge: UnifiedChatRequest = {
-          model: "openai/gpt-oss-20b",
-          messages: requestMessage,
-          stream: true,
-          reasoning: {
-            enabled: true,
-            effort: "high",
-          },
+        const requestMessage: chatStreanRequest = {
+          provider: "ollama",
+          model: "gpt-oss:latest",
+          messages: currentMessage,
         };
-        let content = "";
-        let thinkingContent = "";
-        const stream = await chatService(requestMessge, "openai", (data) => {
-          if (data?.type === "content") {
-            content += data.text;
-            set({
-              message: [
-                ...requestMessage,
-                { role: "assistant", content: content },
-              ],
-              chatMessage: [
-                ...requestMessage,
-                {
-                  role: "assistant",
-                  content: content,
-                  isThinking: false,
-                  thinkingContent,
-                },
-              ],
-            });
-          }
-          if (data?.type === "thinking") {
-            thinkingContent += data.text;
-            set({
-              chatMessage: [
-                ...requestMessage,
-                {
-                  role: "assistant",
-                  content: content,
-                  isThinking: true,
-                  thinkingContent,
-                },
-              ],
-            });
-          }
+        let assistantContent = "";
+
+        set({
+          message: currentMessage,
+          chatMessage: currentMessage,
+          chatLoading: true,
+          chatError: null,
         });
-        return stream;
+
+        try {
+          await chatService(requestMessage, (event) => {
+            if (event.event === "delta") {
+              const text = event.data.text;
+
+              if (typeof text !== "string") {
+                return;
+              }
+
+              assistantContent += text;
+
+              const assistantMessage: LlmMessage = {
+                role: "assistant",
+                content: assistantContent,
+              };
+
+              set({
+                message: [...currentMessage, assistantMessage],
+                chatMessage: [...currentMessage, assistantMessage],
+              });
+            }
+
+            if (event.event === "error") {
+              const message =
+                typeof event.data.message === "string"
+                  ? event.data.message
+                  : "流式请求失败";
+
+              throw new Error(message);
+            }
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "对话请求失败";
+
+          set({
+            chatError: errorMessage,
+            message: assistantContent
+              ? [
+                  ...currentMessage,
+                  {
+                    role: "assistant",
+                    content: assistantContent,
+                  },
+                ]
+              : [
+                  ...currentMessage,
+                  {
+                    role: "assistant",
+                    content: `抱歉，${errorMessage}`,
+                  },
+                ],
+            chatMessage: assistantContent
+              ? [
+                  ...currentMessage,
+                  {
+                    role: "assistant",
+                    content: assistantContent,
+                  },
+                ]
+              : [
+                  ...currentMessage,
+                  {
+                    role: "assistant",
+                    content: `抱歉，${errorMessage}`,
+                  },
+                ],
+          });
+
+          throw error;
+        } finally {
+          set({
+            chatLoading: false,
+            attachedFiles: [],
+          });
+        }
+      },
+
+      clearChatError: () => {
+        set({ chatError: null });
+      },
+
+      toggleArtifacts: () => {
+        set((state) => ({ isArtifactsOpen: !state.isArtifactsOpen }));
+      },
+
+      setActiveArtifact: (artifactId) => {
+        set({ activeArtifactId: artifactId });
+      },
+
+      removeArtifact: (artifactId) => {
+        set((state) => {
+          const nextArtifacts = state.artifacts.filter(
+            (artifact) => artifact.id !== artifactId,
+          );
+          const nextActiveArtifactId =
+            state.activeArtifactId === artifactId
+              ? (nextArtifacts[0]?.id ?? null)
+              : state.activeArtifactId;
+
+          return {
+            artifacts: nextArtifacts,
+            activeArtifactId: nextActiveArtifactId,
+            isArtifactsOpen:
+              nextArtifacts.length > 0 ? state.isArtifactsOpen : false,
+          };
+        });
       },
 
       toggleSidebar: () => {
@@ -165,7 +251,9 @@ export const useChatStore = create<ChatStore>()(
       name: "chat-store",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        chatMessage: state.message,
+        currentSessionId: state.currentSessionId,
+        sessions: state.sessions,
+        chatMessage: state.chatMessage,
         message: state.message,
       }),
     },

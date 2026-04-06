@@ -25,7 +25,6 @@ export function MarkdownRenderer({
         rehypePlugins={[rehypeRaw]}
         components={{
           code({ node, className, children, ...props }) {
-            console.log("className", className);
             const match = /language-(\w+)/.exec(className || "");
             const language = match ? match[1] : "";
             const codeContent = String(children).replace(/\n$/, "");

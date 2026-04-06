@@ -14,18 +14,24 @@ export class TransformInterceptor<T> implements NestInterceptor<
   T,
   BaseResponse<T>
 > {
+  private readonly excludePaths = ['/chat/stream'];
   intercept(
     context: ExecutionContext,
     next: CallHandler,
   ): Observable<BaseResponse<T>> {
+    const request = context
+      .switchToHttp()
+      .getRequest<Record<string, unknown>>();
+    const requestPath = (request.url as string)?.split('?')[0] ?? '';
+    if (this.excludePaths.includes(requestPath)) {
+      return next.handle() as unknown as Observable<BaseResponse<T>>;
+    }
     return next.handle().pipe(
-      map(data => {
-        return {
-          code: ErrorCodeEnum.SUCCESS,
-          message: ErrorCodeMessageMap[ErrorCodeEnum.SUCCESS],
-          data,
-        };
-      }),
+      map(data => ({
+        code: ErrorCodeEnum.SUCCESS,
+        message: ErrorCodeMessageMap[ErrorCodeEnum.SUCCESS],
+        data,
+      })),
     );
   }
 }
