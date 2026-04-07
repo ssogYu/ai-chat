@@ -1,11 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  ArrayMinSize,
   IsArray,
   IsEnum,
   IsNumber,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Max,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -29,10 +32,29 @@ export class ChatMessageDto {
     example: '请介绍一下 NestJS 的模块化设计',
   })
   @IsString()
+  @IsNotEmpty()
   content!: string;
 }
 
 export class ChatStreamDto {
+  @ApiPropertyOptional({
+    description: '会话 ID，不传表示创建新会话并保存本轮历史',
+    example: 'cm9w3pbxb0000v7m0h4q45mb7',
+  })
+  @IsOptional()
+  @IsString()
+  conversationId?: string;
+
+  @ApiPropertyOptional({
+    description: '新会话标题，可选；不传时自动取首条用户消息摘要',
+    example: 'NestJS 模块化设计讨论',
+    maxLength: 80,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  title?: string;
+
   @ApiPropertyOptional({
     enum: LLM_PROVIDER_VALUES,
     description: '模型厂商，不传则使用后端默认厂商',
@@ -81,6 +103,7 @@ export class ChatStreamDto {
     description: '完整上下文消息列表',
   })
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => ChatMessageDto)
   messages!: ChatMessageDto[];

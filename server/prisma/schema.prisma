@@ -6,6 +6,17 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ConversationMessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+}
+
 model User {
   id               String    @id @default(cuid())
   email            String    @unique
@@ -16,6 +27,46 @@ model User {
   lastLoginAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  conversations    Conversation[]
 
   @@map("users")
+}
+
+model Conversation {
+  id                   String                @id @default(cuid())
+  userId               String
+  title                String
+  status               ConversationStatus    @default(ACTIVE)
+  messageCount         Int                   @default(0)
+  lastMessageAt        DateTime
+  latestMessagePreview String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages             ConversationMessage[]
+
+  @@index([userId, status, lastMessageAt, id])
+  @@index([userId, updatedAt, id])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id             String                  @id @default(cuid())
+  conversationId String
+  role           ConversationMessageRole
+  content        String                  @db.Text
+  sequence       Int
+  requestId      String?
+  provider       String?
+  model          String?
+  temperature    Float?
+  maxTokens      Int?
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  conversation   Conversation            @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, sequence])
+  @@index([conversationId, createdAt])
+  @@map("conversation_messages")
 }
