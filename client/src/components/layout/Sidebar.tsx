@@ -66,16 +66,16 @@ function SessionItem({
     <button
       type="button"
       className={cn(
-        "group relative flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-all",
+        "group relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-all",
         isActive
-          ? "bg-sidebar-active text-foreground"
+          ? "bg-sidebar-active text-foreground shadow-sm"
           : "text-foreground-muted hover:bg-sidebar-hover hover:text-foreground",
         disabled && "cursor-not-allowed opacity-60",
       )}
       onClick={onSelect}
       disabled={disabled}
     >
-      <Icons.messageSquare className="h-4 w-4 shrink-0 opacity-60" />
+      <Icons.messageSquare className="h-4 w-4 shrink-0 opacity-70" />
       <span className="flex-1 truncate text-sm">{session.title}</span>
       <span className="shrink-0 text-[11px] text-foreground-muted">
         {session.messageCount}
@@ -119,23 +119,26 @@ export function Sidebar() {
   if (!isSidebarOpen) return null;
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex items-center justify-between border-b border-sidebar-border p-4">
+    <aside className="m-4 mr-0 flex h-[calc(100%-2rem)] w-72 flex-col overflow-hidden rounded-3xl border border-sidebar-border bg-sidebar shadow-md backdrop-blur-lg">
+      <div className="relative flex items-center justify-between border-b border-sidebar-border p-4">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(196,229,181,0.26),transparent_55%)]" />
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-accent-hover">
-            <Icons.sparkles className="h-4 w-4 text-accent-foreground" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gradient-start to-gradient-end shadow-sm">
+            <Icons.sparkles className="h-4 w-4 text-primary" />
           </div>
-          <span className="font-semibold text-foreground">AI Chat</span>
+          <span className="text-lg text-foreground [font-family:var(--font-display)]">
+            AI Chat
+          </span>
         </div>
         <button
           onClick={() => setSidebarOpen(false)}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
+          className="flex h-8 w-8 items-center justify-center rounded-xl text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
         >
           <Icons.panelLeftClose className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3 mt-4">
+      <div className="mt-4 flex-1 overflow-y-auto px-3 pb-3">
         {isLoadingSessions && sessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Icons.loader className="mb-3 h-5 w-5 animate-spin text-foreground-muted" />
@@ -172,7 +175,7 @@ export function Sidebar() {
                 onClick={() => void loadMoreSessions()}
                 disabled={isLoadingMoreSessions}
                 className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-foreground transition-colors",
+                  "flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-border bg-background/70 px-3 py-2 text-sm text-foreground transition-colors",
                   isLoadingMoreSessions
                     ? "cursor-not-allowed opacity-60"
                     : "hover:bg-sidebar-hover",
@@ -192,7 +195,7 @@ export function Sidebar() {
 
       <div className="relative border-t border-sidebar-border p-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-hover">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gradient-start to-gradient-end">
             {user?.avatar ? (
               <Image
                 src={user.avatar}
@@ -213,18 +216,18 @@ export function Sidebar() {
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown(!showDropdown)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
             >
               <Icons.moreHorizontal className="h-4 w-4" />
             </button>
             {showDropdown && (
-              <div className="absolute bottom-full right-0 mb-2 w-40 rounded-lg border border-sidebar-border bg-sidebar shadow-lg">
+              <div className="absolute bottom-full right-0 mb-2 w-40 rounded-xl border border-sidebar-border bg-sidebar shadow-lg">
                 <button
                   onClick={() => {
                     logout();
                     setShowDropdown(false);
                   }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-foreground-muted transition-colors hover:bg-sidebar-hover hover:text-foreground"
                 >
                   <Icons.logout className="h-4 w-4" />
                   退出登录

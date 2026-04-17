@@ -1,39 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, User } from '@prisma/client';
-import { PrismaService } from '../../database/prisma/prisma.service';
 import { UserEntity } from './entities/user.entity';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly usersRepository: UsersRepository) {}
 
   async create(data: Prisma.UserCreateInput): Promise<User> {
-    return this.prismaService.user.create({ data });
+    return this.usersRepository.create(data);
   }
 
   async findById(id: string): Promise<User | null> {
-    return this.prismaService.user.findUnique({ where: { id } });
+    return this.usersRepository.findById(id);
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.prismaService.user.findUnique({ where: { email } });
+    return this.usersRepository.findByEmail(email);
   }
 
   async updateRefreshTokenHash(
     userId: string,
     refreshTokenHash: string | null,
   ): Promise<void> {
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: { refreshTokenHash },
-    });
+    await this.usersRepository.updateRefreshTokenHash(userId, refreshTokenHash);
   }
 
   async updateLastLoginAt(userId: string): Promise<void> {
-    await this.prismaService.user.update({
-      where: { id: userId },
-      data: { lastLoginAt: new Date() },
-    });
+    await this.usersRepository.updateLastLoginAt(userId);
   }
 
   toEntity(user: User): UserEntity {

@@ -96,7 +96,7 @@ export function AuthPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative flex min-h-screen w-full overflow-hidden bg-transparent">
       <div
         className={cn(
           "pointer-events-none fixed inset-0 transition-opacity duration-700",
@@ -120,7 +120,7 @@ export function AuthPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
                 <Icons.sparkles className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="text-lg font-semibold tracking-tight text-foreground">
+              <span className="text-2xl tracking-tight text-foreground [font-family:var(--font-display)]">
                 AI Chat
               </span>
             </div>
@@ -168,7 +168,7 @@ export function AuthPage() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                   <Icons.sparkles className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <span className="text-base font-semibold tracking-tight">
+                <span className="text-xl tracking-tight [font-family:var(--font-display)]">
                   AI Chat
                 </span>
               </div>
@@ -184,7 +184,7 @@ export function AuthPage() {
               )}
             >
               <div className="mb-8">
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                <h2 className="text-3xl tracking-tight text-foreground [font-family:var(--font-display)]">
                   {isLogin ? "登录" : "创建账号"}
                 </h2>
                 <p className="mt-2 text-sm text-foreground-muted">
@@ -220,7 +220,7 @@ export function AuthPage() {
                         value={formData.name}
                         onChange={(e) => updateField("name", e.target.value)}
                         placeholder="你的用户名"
-                        className="w-full h-11 rounded-lg border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
+                        className="w-full h-11 rounded-xl border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
                       />
                     </div>
                   </div>
@@ -243,7 +243,7 @@ export function AuthPage() {
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
                       placeholder="name@example.com"
-                      className="w-full h-11 rounded-lg border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
+                      className="w-full h-11 rounded-xl border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
                       required
                     />
                   </div>
@@ -270,7 +270,7 @@ export function AuthPage() {
                           ? "输入密码"
                           : "至少 8 位，需包含大小写字母和数字"
                       }
-                      className="w-full h-11 rounded-lg border border-input-border bg-input pl-10 pr-11 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
+                      className="w-full h-11 rounded-xl border border-input-border bg-input pl-10 pr-11 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
                       required
                       minLength={8}
                     />
@@ -308,7 +308,7 @@ export function AuthPage() {
                           updateField("confirmPassword", e.target.value)
                         }
                         placeholder="再次输入密码"
-                        className="w-full h-11 rounded-lg border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
+                        className="w-full h-11 rounded-xl border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-foreground-muted/40 transition-all duration-200 focus:outline-none focus:border-input-focus focus:ring-2 focus:ring-ring/20"
                         required
                         minLength={8}
                       />
@@ -353,7 +353,7 @@ export function AuthPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="relative w-full h-11 rounded-lg text-sm font-medium overflow-hidden transition-all duration-300 hover:shadow-md active:scale-[0.98]"
+                    className="relative h-11 w-full overflow-hidden rounded-xl text-sm font-medium transition-all duration-300 hover:shadow-md active:scale-[0.98]"
                   >
                     <span
                       className={cn(

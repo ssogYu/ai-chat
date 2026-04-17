@@ -50,13 +50,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   return (
     <div
       className={cn(
-        "group flex gap-4",
+        "group flex gap-4 py-2",
         isUser ? "flex-row-reverse" : "flex-row",
       )}
     >
       <div
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+          "mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm",
           isUser
             ? "bg-chat-user-bg text-chat-user-fg"
             : "bg-chat-assistant-bg text-chat-assistant-fg ring-1 ring-border",
@@ -76,10 +76,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
         <div
           className={cn(
-            "relative max-w-[85%] rounded-2xl px-4 py-3",
+            "relative max-w-[85%] rounded-3xl px-4 py-3 shadow-sm",
             isUser
               ? "bg-chat-user-bg text-chat-user-fg"
-              : "bg-chat-assistant-bg text-chat-assistant-foreground",
+              : "border border-card-border bg-chat-assistant-bg text-chat-assistant-fg backdrop-blur-sm",
           )}
         >
           <MarkdownRenderer content={message?.content || ""} />

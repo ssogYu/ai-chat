@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import {
   BadRequestApiException,
   NotFoundApiException,
 } from 'src/common/exceptions/api.exception';
-import { PrismaService } from '../../database/prisma/prisma.service';
 import type { LlmMessage, LlmProvider, LlmRole } from '../llm/llm.types';
 import { ChatStreamDto } from './dto/chat-stream.dto';
 import { ConversationListQueryDto } from './dto/conversation-query.dto';
@@ -14,63 +12,19 @@ import {
   ConversationListResponseDto,
   type ConversationStatusValue,
 } from './dto/conversation-response.dto';
+import {
+  ConversationMessageRecord,
+  ConversationMessageRoleRecord,
+  ConversationRecord,
+  ConversationsRepository,
+  ConversationStatusRecord,
+  ConversationWithMessages,
+  PersistedMessageInput,
+} from './conversations.repository';
 
 type PersistableMessage = {
   role: LlmRole;
   content: string;
-};
-
-type ConversationStatusRecord = 'ACTIVE' | 'ARCHIVED';
-type ConversationMessageRoleRecord = 'SYSTEM' | 'USER' | 'ASSISTANT';
-type ConversationRecord = {
-  id: string;
-  userId: string;
-  title: string;
-  status: ConversationStatusRecord;
-  messageCount: number;
-  lastMessageAt: Date;
-  latestMessagePreview: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-type ConversationMessageRecord = {
-  id: string;
-  conversationId: string;
-  role: ConversationMessageRoleRecord;
-  content: string;
-  sequence: number;
-  requestId: string | null;
-  provider: string | null;
-  model: string | null;
-  temperature: number | null;
-  maxTokens: number | null;
-  metadata: Prisma.JsonValue | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
-type ConversationWithMessages = ConversationRecord & {
-  messages: ConversationMessageRecord[];
-};
-type ConversationCounter = Pick<ConversationRecord, 'id' | 'messageCount'>;
-type ConversationModelDelegate = {
-  findMany(args: Record<string, unknown>): Promise<ConversationRecord[]>;
-  findFirst(
-    args: Record<string, unknown>,
-  ): Promise<ConversationWithMessages | null>;
-  findUnique(
-    args: Record<string, unknown>,
-  ): Promise<ConversationCounter | null>;
-  count(args: Record<string, unknown>): Promise<number>;
-  create(args: Record<string, unknown>): Promise<ConversationRecord>;
-  update(args: Record<string, unknown>): Promise<ConversationRecord>;
-};
-type ConversationMessageModelDelegate = {
-  create(args: Record<string, unknown>): Promise<ConversationMessageRecord>;
-  createMany(args: Record<string, unknown>): Promise<Prisma.BatchPayload>;
-};
-type TransactionClientWithConversation = Prisma.TransactionClient & {
-  conversation: ConversationModelDelegate;
-  conversationMessage: ConversationMessageModelDelegate;
 };
 
 type AssistantReplyInput = {
@@ -89,7 +43,9 @@ const MAX_PREVIEW_LENGTH = 160;
 
 @Injectable()
 export class ConversationsService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly conversationsRepository: ConversationsRepository,
+  ) {}
 
   async listConversations(
     userId: string,
@@ -98,21 +54,10 @@ export class ConversationsService {
     const pageNo = query.pageNo ?? 1;
     const pageSize = query.pageSize ?? DEFAULT_PAGE_SIZE;
     const skip = (pageNo - 1) * pageSize;
-    const where = {
-      userId,
-      status: 'ACTIVE',
-    } satisfies Record<string, unknown>;
 
     const [total, conversations] = await Promise.all([
-      this.conversationModel.count({
-        where,
-      }),
-      this.conversationModel.findMany({
-        where,
-        orderBy: [{ lastMessageAt: 'desc' }, { id: 'desc' }],
-        skip,
-        take: pageSize,
-      }),
+      this.conversationsRepository.countActiveByUser(userId),
+      this.conversationsRepository.findActiveByUser(userId, skip, pageSize),
     ]);
 
     const totalPages = total === 0 ? 0 : Math.ceil(total / pageSize);
@@ -134,20 +79,11 @@ export class ConversationsService {
     userId: string,
     conversationId: string,
   ): Promise<ConversationDetailDto> {
-    const conversation = await this.conversationModel.findFirst({
-      where: {
-        id: conversationId,
+    const conversation =
+      await this.conversationsRepository.findByIdAndUserWithMessages(
         userId,
-      },
-      orderBy: [{ lastMessageAt: 'desc' }, { id: 'desc' }],
-      include: {
-        messages: {
-          orderBy: {
-            sequence: 'asc',
-          },
-        },
-      },
-    });
+        conversationId,
+      );
 
     if (!conversation) {
       throw new NotFoundApiException('会话不存在');
@@ -185,19 +121,11 @@ export class ConversationsService {
       };
     }
 
-    const conversation = await this.conversationModel.findFirst({
-      where: {
-        id: payload.conversationId,
+    const conversation =
+      await this.conversationsRepository.findByIdAndUserWithMessages(
         userId,
-      },
-      include: {
-        messages: {
-          orderBy: {
-            sequence: 'asc',
-          },
-        },
-      },
-    });
+        payload.conversationId,
+      );
 
     if (!conversation) {
       throw new NotFoundApiException('会话不存在');
@@ -210,7 +138,6 @@ export class ConversationsService {
     const storedMessages = conversation.messages.map(message =>
       this.toLlmMessage(message),
     );
-    //增量检测：判断前端传来的是完整历史还是仅新增消息
     const newMessages = this.resolveNewMessages(
       storedMessages,
       normalizedMessages,
@@ -219,7 +146,7 @@ export class ConversationsService {
     if (newMessages.length === 0) {
       throw new BadRequestApiException('未检测到新的待发送消息');
     }
-    //追加新消息到数据库
+
     await this.appendMessages(conversation.id, newMessages, requestId);
 
     return {
@@ -235,56 +162,16 @@ export class ConversationsService {
       return;
     }
 
-    await this.prismaService.$transaction(
-      async tx => {
-        const client = tx as TransactionClientWithConversation;
-        const conversation = await client.conversation.findUnique({
-          where: {
-            id: input.conversationId,
-          },
-          select: {
-            id: true,
-            messageCount: true,
-          },
-        });
-
-        if (!conversation) {
-          throw new NotFoundApiException('会话不存在');
-        }
-
-        const messageTimestamp = new Date();
-        // 创建 assistant 消息记录，保留 provider/model/temperature/maxTokens 快照
-        await client.conversationMessage.create({
-          data: {
-            conversationId: input.conversationId,
-            role: 'ASSISTANT',
-            content: normalizedContent,
-            sequence: conversation.messageCount + 1,
-            requestId: input.requestId,
-            provider: input.provider,
-            model: input.model,
-            temperature: input.temperature,
-            maxTokens: input.maxTokens,
-            createdAt: messageTimestamp,
-            updatedAt: messageTimestamp,
-          },
-        });
-        // 更新会话计数 + 摘要 + 时间
-        await client.conversation.update({
-          where: {
-            id: input.conversationId,
-          },
-          data: {
-            messageCount: conversation.messageCount + 1,
-            lastMessageAt: messageTimestamp,
-            latestMessagePreview: this.buildPreview(normalizedContent),
-          },
-        });
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
-    );
+    await this.conversationsRepository.appendAssistantReply({
+      conversationId: input.conversationId,
+      content: normalizedContent,
+      requestId: input.requestId,
+      provider: input.provider,
+      model: input.model,
+      temperature: input.temperature,
+      maxTokens: input.maxTokens,
+      latestMessagePreview: this.buildPreview(normalizedContent),
+    });
   }
 
   private async createConversation(
@@ -293,38 +180,15 @@ export class ConversationsService {
     messages: PersistableMessage[],
     requestId: string,
   ): Promise<ConversationRecord> {
-    const timestamp = new Date();
-
-    return this.prismaService.$transaction(
-      async tx => {
-        const client = tx as TransactionClientWithConversation;
-
-        return client.conversation.create({
-          data: {
-            userId,
-            title: this.resolveTitle(title, messages),
-            messageCount: messages.length,
-            lastMessageAt: timestamp,
-            latestMessagePreview: this.buildPreview(
-              messages[messages.length - 1].content,
-            ),
-            messages: {
-              create: messages.map((message, index) => ({
-                role: this.toPrismaRole(message.role),
-                content: message.content,
-                sequence: index + 1,
-                requestId,
-                createdAt: timestamp,
-                updatedAt: timestamp,
-              })),
-            },
-          },
-        });
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
-    );
+    return this.conversationsRepository.createConversation({
+      userId,
+      title: this.resolveTitle(title, messages),
+      messages: messages.map(message => this.toPersistedMessage(message)),
+      requestId,
+      latestMessagePreview: this.buildPreview(
+        messages[messages.length - 1].content,
+      ),
+    });
   }
 
   private async appendMessages(
@@ -332,55 +196,14 @@ export class ConversationsService {
     messages: PersistableMessage[],
     requestId: string,
   ): Promise<void> {
-    await this.prismaService.$transaction(
-      async tx => {
-        //查当前 messageCount（锁住这行记录）
-        const client = tx as TransactionClientWithConversation;
-        const conversation = await client.conversation.findUnique({
-          where: {
-            id: conversationId,
-          },
-          select: {
-            id: true,
-            messageCount: true,
-          },
-        });
-
-        if (!conversation) {
-          throw new NotFoundApiException('会话不存在');
-        }
-
-        const messageTimestamp = new Date();
-        //批量创建新消息，sequence 接续
-        await client.conversationMessage.createMany({
-          data: messages.map((message, index) => ({
-            conversationId,
-            role: this.toPrismaRole(message.role),
-            content: message.content,
-            sequence: conversation.messageCount + index + 1, // 接续编号
-            requestId,
-            createdAt: messageTimestamp,
-            updatedAt: messageTimestamp,
-          })),
-        });
-        //更新会话的计数 + 最新消息摘要 + 时间
-        await client.conversation.update({
-          where: {
-            id: conversationId,
-          },
-          data: {
-            messageCount: conversation.messageCount + messages.length,
-            lastMessageAt: messageTimestamp,
-            latestMessagePreview: this.buildPreview(
-              messages[messages.length - 1].content,
-            ),
-          },
-        });
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      },
-    );
+    await this.conversationsRepository.appendMessages({
+      conversationId,
+      messages: messages.map(message => this.toPersistedMessage(message)),
+      requestId,
+      latestMessagePreview: this.buildPreview(
+        messages[messages.length - 1].content,
+      ),
+    });
   }
 
   private normalizeMessages(
@@ -408,7 +231,6 @@ export class ConversationsService {
     storedMessages: LlmMessage[],
     incomingMessages: PersistableMessage[],
   ): PersistableMessage[] {
-    // 前端传了完整历史 → 取增量部分
     if (
       incomingMessages.length >= storedMessages.length &&
       storedMessages.every((message, index) =>
@@ -417,7 +239,7 @@ export class ConversationsService {
     ) {
       return incomingMessages.slice(storedMessages.length);
     }
-    //前端只传了新消息（不带 assistant）→ 全部当作新增
+
     if (incomingMessages.every(message => message.role !== 'assistant')) {
       return incomingMessages;
     }
@@ -497,7 +319,16 @@ export class ConversationsService {
     };
   }
 
-  private toPrismaRole(role: LlmRole): 'SYSTEM' | 'USER' | 'ASSISTANT' {
+  private toPersistedMessage(
+    message: PersistableMessage,
+  ): PersistedMessageInput {
+    return {
+      role: this.toPrismaRole(message.role),
+      content: message.content,
+    };
+  }
+
+  private toPrismaRole(role: LlmRole): ConversationMessageRoleRecord {
     if (role === 'system') {
       return 'SYSTEM';
     }
@@ -509,7 +340,7 @@ export class ConversationsService {
     return 'USER';
   }
 
-  private toApiRole(role: ConversationMessageRecord['role']): LlmRole {
+  private toApiRole(role: ConversationMessageRoleRecord): LlmRole {
     if (role === 'SYSTEM') {
       return 'system';
     }
@@ -536,9 +367,5 @@ export class ConversationsService {
     right: Pick<LlmMessage, 'role' | 'content'> | undefined,
   ): boolean {
     return left?.role === right?.role && left?.content === right?.content;
-  }
-
-  private get conversationModel(): ConversationModelDelegate {
-    return this.prismaService['conversation'] as ConversationModelDelegate;
   }
 }

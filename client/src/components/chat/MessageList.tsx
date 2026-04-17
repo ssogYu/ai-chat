@@ -36,9 +36,9 @@ export function MessageList() {
   return (
     <div
       ref={containerRef}
-      className="h-full overflow-y-auto px-4 overflow-x-hidden"
+      className="h-full overflow-x-hidden overflow-y-auto px-5"
     >
-      <div className="mx-auto max-w-4xl py-6">
+      <div className="mx-auto max-w-4xl py-7">
         {messages.map((message, index) => (
           <MessageBubble key={index} message={message} />
         ))}

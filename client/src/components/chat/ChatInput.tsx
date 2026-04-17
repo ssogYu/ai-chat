@@ -107,8 +107,8 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
   return (
     <div
       className={cn(
-        "bg-background p-4",
-        showBorder && "border-t border-border",
+        "bg-transparent p-4",
+        showBorder && "border-t border-card-border",
       )}
     >
       {attachedFiles.length > 0 && (
@@ -118,7 +118,7 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
             return (
               <div
                 key={index}
-                className="flex items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-2 text-sm"
+                className="flex items-center gap-2 rounded-xl border border-border bg-secondary/85 px-3 py-2 text-sm shadow-sm"
               >
                 <FileIcon className="h-4 w-4 text-foreground-muted" />
                 <span className="max-w-[150px] truncate">{file.name}</span>
@@ -136,17 +136,17 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
 
       <div
         className={cn(
-          "relative rounded-2xl border bg-input transition-all",
+          "relative rounded-3xl border bg-input/85 shadow-sm backdrop-blur-md transition-all",
           isDragOver
             ? "border-accent bg-accent/10"
-            : "border-input-border focus-within:border-input-focus",
+            : "border-input-border focus-within:border-input-focus focus-within:shadow-md",
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
         {isDragOver && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border-2 border-dashed border-accent bg-accent/10">
+          <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl border-2 border-dashed border-accent bg-accent/10">
             <div className="flex items-center gap-2 text-accent-foreground">
               <Icons.paperclip className="h-5 w-5" />
               <span className="font-medium">释放文件以上传</span>
@@ -160,9 +160,9 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
           onKeyDown={handleKeyDown}
           placeholder="输入消息... (⌘ + Enter 发送)"
           rows={1}
-          className="p-3 pt-4 w-full max-h-[200px] min-h-[40px] flex-1 resize-none bg-transparent py-2 text-foreground placeholder:text-foreground-muted focus:outline-none"
+          className="w-full max-h-[200px] min-h-[42px] resize-none bg-transparent px-4 pt-4 pb-2 text-foreground placeholder:text-foreground-muted/90 focus:outline-none"
         />
-        <div className="flex gap-2 p-3 pt-0 justify-between">
+        <div className="flex justify-between gap-2 p-3 pt-0">
           <div className="flex items-center gap-1">
             <input
               ref={fileInputRef}
@@ -174,7 +174,7 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-foreground-muted transition-colors hover:bg-secondary hover:text-foreground"
               title="上传文件"
             >
               <Icons.paperclip className="h-5 w-5" />
@@ -184,9 +184,9 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
               onClick={toggleWebSearch}
               disabled={chatLoading}
               className={cn(
-                "flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
+                "flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors",
                 webSearchEnabled
-                  ? "bg-accent text-accent-foreground"
+                  ? "bg-accent text-accent-foreground shadow-sm"
                   : "text-foreground-muted hover:bg-secondary hover:text-foreground",
                 chatLoading && "cursor-not-allowed opacity-60",
               )}
