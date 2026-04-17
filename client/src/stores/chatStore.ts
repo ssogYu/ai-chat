@@ -1,27 +1,12 @@
 import { chatService } from "@/services";
-import { chatStreanRequest, LlmMessage } from "@/types/chat";
+import type {
+  ChatStreamRequest,
+  ConversationDetail,
+  ConversationListItem,
+  LlmMessage,
+} from "@/types/chat";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-export interface RequestMessage {
-  role: "user" | "model";
-  parts: { text: string }[];
-  isThinking?: boolean;
-}
-
-export interface Citation {
-  id: number;
-  url: string;
-  title: string;
-  snippet: string;
-}
-
-export interface Session {
-  id: string;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-  messageCount: number;
-}
 
 export interface Artifact {
   id: string;
@@ -32,10 +17,10 @@ export interface Artifact {
 }
 
 interface ChatStore {
-  sessions: Session[];
+  sessions: ConversationListItem[];
   currentSessionId: string | null;
-  message: LlmMessage[];
-  chatMessage: LlmMessage[];
+  currentSessionTitle: string;
+  messages: LlmMessage[];
   activeMessageId: string | null;
   artifacts: Artifact[];
   activeArtifactId: string | null;
@@ -43,71 +28,305 @@ interface ChatStore {
   isSidebarOpen: boolean;
   webSearchEnabled: boolean;
   attachedFiles: File[];
+  hasInitialized: boolean;
+  isInitializing: boolean;
+  isLoadingSessions: boolean;
+  isLoadingMoreSessions: boolean;
+  isLoadingConversation: boolean;
+  sessionsPageNo: number;
+  sessionsPageSize: number;
+  sessionsHasNextPage: boolean;
+  sessionsTotal: number;
   chatLoading: boolean;
-  chatError: string | null;
 
-  //Actions
-  chat: (input: string) => Promise<unknown>;
-  clearChatError: () => void;
+  initialize: () => Promise<void>;
+  loadMoreSessions: () => Promise<void>;
+  selectSession: (sessionId: string) => Promise<void>;
+  createNewConversation: () => void;
+  chat: (input: string) => Promise<void>;
   toggleArtifacts: () => void;
   setActiveArtifact: (artifactId: string | null) => void;
   removeArtifact: (artifactId: string) => void;
-
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleWebSearch: () => void;
   setWebSearchEnabled: (enabled: boolean) => void;
-
   addAttachedFile: (file: File) => void;
   removeAttachedFile: (index: number) => void;
   clearAttachedFiles: () => void;
 }
 
+const DEFAULT_PAGE_SIZE = 20;
+
+function buildConversationTitle(input: string) {
+  const normalized = input.replace(/\s+/g, " ").trim();
+
+  if (normalized.length <= 40) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, 39).trimEnd()}…`;
+}
+
+function toMessageList(detail: ConversationDetail): LlmMessage[] {
+  return detail.messages.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
+}
+
+function upsertSession(
+  sessions: ConversationListItem[],
+  session: ConversationListItem,
+) {
+  const nextSessions = [
+    session,
+    ...sessions.filter((item) => item.id !== session.id),
+  ];
+  nextSessions.sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+  );
+  return nextSessions;
+}
+
 export const useChatStore = create<ChatStore>()(
   persist(
     (set, getState) => ({
+      // 会话列表
       sessions: [],
-      currentSessionId: "session-1",
-      message: [],
-      chatMessage: [],
+      sessionsPageNo: 0,
+      sessionsPageSize: DEFAULT_PAGE_SIZE,
+      sessionsHasNextPage: false,
+      sessionsTotal: 0,
+
+      // 当前会话
+      currentSessionId: null,
+      currentSessionTitle: "新对话",
+
+      // 当前对话消息记录列表
+      messages: [],
       activeMessageId: null,
       artifacts: [],
       activeArtifactId: null,
       isArtifactsOpen: false,
       isSidebarOpen: true,
+
       webSearchEnabled: false,
       attachedFiles: [],
+      hasInitialized: false,
+      isInitializing: false,
+      isLoadingSessions: false,
+      isLoadingMoreSessions: false,
+      isLoadingConversation: false,
       chatLoading: false,
-      chatError: null,
+
+      initialize: async () => {
+        const {
+          hasInitialized,
+          isInitializing,
+          currentSessionId,
+          sessionsPageSize,
+        } = getState();
+
+        if (hasInitialized || isInitializing) {
+          return;
+        }
+
+        set({
+          isInitializing: true,
+          isLoadingSessions: true,
+        });
+
+        try {
+          const response = await chatService.listConversations(
+            1,
+            sessionsPageSize,
+          );
+
+          set({
+            sessions: response.items,
+            sessionsPageNo: response.pageInfo.pageNo,
+            sessionsPageSize: response.pageInfo.pageSize,
+            sessionsHasNextPage: response.pageInfo.hasNextPage,
+            sessionsTotal: response.pageInfo.total,
+            hasInitialized: true,
+            isInitializing: false,
+            isLoadingSessions: false,
+          });
+
+          if (currentSessionId) {
+            await getState().selectSession(currentSessionId);
+          }
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "加载会话列表失败";
+          set({
+            hasInitialized: true,
+            isInitializing: false,
+            isLoadingSessions: false,
+          });
+          //TODO toast
+        }
+      },
+
+      loadMoreSessions: async () => {
+        const {
+          isLoadingMoreSessions,
+          sessionsHasNextPage,
+          sessionsPageNo,
+          sessionsPageSize,
+        } = getState();
+
+        if (isLoadingMoreSessions || !sessionsHasNextPage) {
+          return;
+        }
+
+        set({ isLoadingMoreSessions: true });
+
+        try {
+          const nextPageNo = sessionsPageNo + 1;
+          const response = await chatService.listConversations(
+            nextPageNo,
+            sessionsPageSize,
+          );
+
+          set((state) => ({
+            sessions: [
+              ...state.sessions,
+              ...response.items.filter(
+                (item) =>
+                  !state.sessions.some((session) => session.id === item.id),
+              ),
+            ],
+            sessionsPageNo: response.pageInfo.pageNo,
+            sessionsPageSize: response.pageInfo.pageSize,
+            sessionsHasNextPage: response.pageInfo.hasNextPage,
+            sessionsTotal: response.pageInfo.total,
+            isLoadingMoreSessions: false,
+          }));
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "加载更多会话失败";
+          set({
+            isLoadingMoreSessions: false,
+          });
+          //TODO toast
+        }
+      },
+
+      selectSession: async (sessionId: string) => {
+        const { isLoadingConversation, chatLoading } = getState();
+
+        if (!sessionId || isLoadingConversation || chatLoading) {
+          return;
+        }
+
+        set({
+          currentSessionId: sessionId,
+          isLoadingConversation: true,
+        });
+
+        try {
+          const detail = await chatService.getConversationDetail(sessionId);
+
+          set((state) => ({
+            currentSessionId: detail.id,
+            currentSessionTitle: detail.title,
+            messages: toMessageList(detail),
+            sessions: upsertSession(state.sessions, {
+              id: detail.id,
+              title: detail.title,
+              status: detail.status,
+              messageCount: detail.messageCount,
+              latestMessagePreview: detail.latestMessagePreview,
+              lastMessageAt: detail.lastMessageAt,
+              createdAt: detail.createdAt,
+              updatedAt: detail.updatedAt,
+            }),
+            isLoadingConversation: false,
+          }));
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : "加载会话详情失败";
+          set({
+            isLoadingConversation: false,
+          });
+          //TODO toast
+        }
+      },
+
+      createNewConversation: () => {
+        set({
+          currentSessionId: null,
+          currentSessionTitle: "新对话",
+          messages: [],
+          activeMessageId: null,
+          artifacts: [],
+          activeArtifactId: null,
+          isArtifactsOpen: false,
+        });
+      },
 
       chat: async (input: string) => {
-        const { message, chatLoading } = getState();
+        const { messages, chatLoading, currentSessionId, currentSessionTitle } =
+          getState();
         const trimmedInput = input.trim();
 
         if (!trimmedInput || chatLoading) {
           return;
         }
 
-        const currentMessage: LlmMessage[] = [
-          ...message,
+        const nextMessages: LlmMessage[] = [
+          ...messages,
           { role: "user", content: trimmedInput },
         ];
-        const requestMessage: chatStreanRequest = {
+        const requestMessage: ChatStreamRequest = {
+          conversationId: currentSessionId ?? undefined,
+          title:
+            currentSessionId || currentSessionTitle !== "新对话"
+              ? undefined
+              : buildConversationTitle(trimmedInput),
           provider: "ollama",
           model: "gpt-oss:latest",
-          messages: currentMessage,
+          messages: nextMessages,
         };
         let assistantContent = "";
+        let resolvedConversationId = currentSessionId;
+        const optimisticTitle =
+          currentSessionId === null
+            ? buildConversationTitle(trimmedInput)
+            : currentSessionTitle;
 
         set({
-          message: currentMessage,
-          chatMessage: currentMessage,
+          currentSessionTitle: optimisticTitle,
+          messages: nextMessages,
           chatLoading: true,
-          chatError: null,
         });
 
         try {
-          await chatService(requestMessage, (event) => {
+          await chatService.streamConversation(requestMessage, (event) => {
+            if (event.event === "meta") {
+              const conversationId = event.data.conversationId;
+
+              if (typeof conversationId === "string") {
+                resolvedConversationId = conversationId;
+                set((state) => ({
+                  currentSessionId: conversationId,
+                  sessions: upsertSession(state.sessions, {
+                    id: conversationId,
+                    title: optimisticTitle,
+                    status: "active",
+                    messageCount: nextMessages.length,
+                    latestMessagePreview: trimmedInput,
+                    lastMessageAt: new Date().toISOString(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  }),
+                }));
+              }
+            }
+
             if (event.event === "delta") {
               const text = event.data.text;
 
@@ -123,57 +342,86 @@ export const useChatStore = create<ChatStore>()(
               };
 
               set({
-                message: [...currentMessage, assistantMessage],
-                chatMessage: [...currentMessage, assistantMessage],
+                messages: [...nextMessages, assistantMessage],
               });
             }
 
             if (event.event === "error") {
-              const message =
+              const errorMessage =
                 typeof event.data.message === "string"
                   ? event.data.message
                   : "流式请求失败";
 
-              throw new Error(message);
+              throw new Error(errorMessage);
             }
           });
+
+          if (resolvedConversationId) {
+            const detail = await chatService.getConversationDetail(
+              resolvedConversationId,
+            );
+
+            set((state) => ({
+              currentSessionId: detail.id,
+              currentSessionTitle: detail.title,
+              messages: toMessageList(detail),
+              sessions: upsertSession(state.sessions, {
+                id: detail.id,
+                title: detail.title,
+                status: detail.status,
+                messageCount: detail.messageCount,
+                latestMessagePreview: detail.latestMessagePreview,
+                lastMessageAt: detail.lastMessageAt,
+                createdAt: detail.createdAt,
+                updatedAt: detail.updatedAt,
+              }),
+            }));
+          }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "对话请求失败";
+          //TODO toast
 
           set({
-            chatError: errorMessage,
-            message: assistantContent
+            messages: assistantContent
               ? [
-                  ...currentMessage,
+                  ...nextMessages,
                   {
                     role: "assistant",
                     content: assistantContent,
                   },
                 ]
               : [
-                  ...currentMessage,
-                  {
-                    role: "assistant",
-                    content: `抱歉，${errorMessage}`,
-                  },
-                ],
-            chatMessage: assistantContent
-              ? [
-                  ...currentMessage,
-                  {
-                    role: "assistant",
-                    content: assistantContent,
-                  },
-                ]
-              : [
-                  ...currentMessage,
+                  ...nextMessages,
                   {
                     role: "assistant",
                     content: `抱歉，${errorMessage}`,
                   },
                 ],
           });
+
+          if (resolvedConversationId) {
+            try {
+              const detail = await chatService.getConversationDetail(
+                resolvedConversationId,
+              );
+              set((state) => ({
+                currentSessionId: detail.id,
+                currentSessionTitle: detail.title,
+                messages: toMessageList(detail),
+                sessions: upsertSession(state.sessions, {
+                  id: detail.id,
+                  title: detail.title,
+                  status: detail.status,
+                  messageCount: detail.messageCount,
+                  latestMessagePreview: detail.latestMessagePreview,
+                  lastMessageAt: detail.lastMessageAt,
+                  createdAt: detail.createdAt,
+                  updatedAt: detail.updatedAt,
+                }),
+              }));
+            } catch {}
+          }
 
           throw error;
         } finally {
@@ -182,10 +430,6 @@ export const useChatStore = create<ChatStore>()(
             attachedFiles: [],
           });
         }
-      },
-
-      clearChatError: () => {
-        set({ chatError: null });
       },
 
       toggleArtifacts: () => {
@@ -252,9 +496,8 @@ export const useChatStore = create<ChatStore>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         currentSessionId: state.currentSessionId,
-        sessions: state.sessions,
-        chatMessage: state.chatMessage,
-        message: state.message,
+        isSidebarOpen: state.isSidebarOpen,
+        webSearchEnabled: state.webSearchEnabled,
       }),
     },
   ),

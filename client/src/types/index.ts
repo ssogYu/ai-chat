@@ -1,2 +1,2 @@
-export * from './ai-adapter.ts'
-export * from './auth'
+export * from "./ai-adapter";
+export * from "./auth";

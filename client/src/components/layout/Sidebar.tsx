@@ -1,22 +1,24 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect } from "react";
-import { useChatStore, Session } from "@/stores/chatStore";
+import { useChatStore } from "@/stores/chatStore";
 import { useAuthStore } from "@/stores/authStore";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
+import type { ConversationListItem } from "@/types/chat";
 
-function groupSessionsByDate(sessions: Session[]) {
-  const groups: { label: string; sessions: Session[] }[] = [];
+function groupSessionsByDate(sessions: ConversationListItem[]) {
+  const groups: { label: string; sessions: ConversationListItem[] }[] = [];
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
   const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const todaySessions: Session[] = [];
-  const weekSessions: Session[] = [];
-  const monthSessions: Session[] = [];
-  const olderSessions: Session[] = [];
+  const todaySessions: ConversationListItem[] = [];
+  const weekSessions: ConversationListItem[] = [];
+  const monthSessions: ConversationListItem[] = [];
+  const olderSessions: ConversationListItem[] = [];
 
   sessions.forEach((session) => {
     const sessionDate = new Date(session.updatedAt);
@@ -48,31 +50,54 @@ function groupSessionsByDate(sessions: Session[]) {
 }
 
 interface SessionItemProps {
-  session: Session;
+  session: ConversationListItem;
   isActive: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }
 
-function SessionItem({ session, isActive, onSelect }: SessionItemProps) {
+function SessionItem({
+  session,
+  isActive,
+  disabled = false,
+  onSelect,
+}: SessionItemProps) {
   return (
-    <div
+    <button
+      type="button"
       className={cn(
-        "group relative flex items-center gap-2 rounded-lg px-3 py-2.5 transition-all cursor-pointer",
+        "group relative flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left transition-all",
         isActive
           ? "bg-sidebar-active text-foreground"
           : "text-foreground-muted hover:bg-sidebar-hover hover:text-foreground",
+        disabled && "cursor-not-allowed opacity-60",
       )}
       onClick={onSelect}
+      disabled={disabled}
     >
       <Icons.messageSquare className="h-4 w-4 shrink-0 opacity-60" />
       <span className="flex-1 truncate text-sm">{session.title}</span>
-    </div>
+      <span className="shrink-0 text-[11px] text-foreground-muted">
+        {session.messageCount}
+      </span>
+    </button>
   );
 }
 
 export function Sidebar() {
-  const { sessions, currentSessionId, isSidebarOpen, setSidebarOpen } =
-    useChatStore();
+  const {
+    sessions,
+    currentSessionId,
+    isSidebarOpen,
+    setSidebarOpen,
+    selectSession,
+    loadMoreSessions,
+    isLoadingMoreSessions,
+    isLoadingSessions,
+    isLoadingConversation,
+    sessionsHasNextPage,
+    chatLoading,
+  } = useChatStore();
   const { user, logout } = useAuthStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,7 +116,6 @@ export function Sidebar() {
   }, []);
 
   const groupedSessions = groupSessionsByDate(sessions);
-
   if (!isSidebarOpen) return null;
 
   return (
@@ -111,8 +135,13 @@ export function Sidebar() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 pb-3">
-        {groupedSessions.length === 0 ? (
+      <div className="flex-1 overflow-y-auto px-3 pb-3 mt-4">
+        {isLoadingSessions && sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Icons.loader className="mb-3 h-5 w-5 animate-spin text-foreground-muted" />
+            <p className="text-sm text-foreground-muted">正在加载会话记录</p>
+          </div>
+        ) : groupedSessions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Icons.messageSquare className="mb-3 h-10 w-10 text-foreground-muted opacity-40" />
             <p className="text-sm text-foreground-muted">暂无对话记录</p>
@@ -130,12 +159,33 @@ export function Sidebar() {
                       key={session.id}
                       session={session}
                       isActive={session.id === currentSessionId}
-                      onSelect={() => {}}
+                      disabled={chatLoading || isLoadingConversation}
+                      onSelect={() => void selectSession(session.id)}
                     />
                   ))}
                 </div>
               </div>
             ))}
+            {sessionsHasNextPage && (
+              <button
+                type="button"
+                onClick={() => void loadMoreSessions()}
+                disabled={isLoadingMoreSessions}
+                className={cn(
+                  "flex w-full items-center justify-center gap-2 rounded-lg border border-sidebar-border px-3 py-2 text-sm text-foreground transition-colors",
+                  isLoadingMoreSessions
+                    ? "cursor-not-allowed opacity-60"
+                    : "hover:bg-sidebar-hover",
+                )}
+              >
+                {isLoadingMoreSessions ? (
+                  <Icons.loader className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Icons.chevronDown className="h-4 w-4" />
+                )}
+                加载更多
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -144,10 +194,12 @@ export function Sidebar() {
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-hover">
             {user?.avatar ? (
-              <img
+              <Image
                 src={user.avatar}
                 alt={user.name || "User"}
                 className="h-full w-full rounded-full object-cover"
+                width={36}
+                height={36}
               />
             ) : (
               <Icons.user className="h-4 w-4 text-accent-foreground" />

@@ -1,16 +1,21 @@
-import { chatStreanRequest } from "@/types/chat";
+import type {
+  ChatSseEvent,
+  ChatSseEventType,
+  ChatStreamRequest,
+  ConversationDetail,
+  ConversationListResponse,
+} from "@/types/chat";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
 const CHAT_ENDPOINT = `${API_BASE_URL}/chat/stream`;
+const CONVERSATIONS_ENDPOINT = `${API_BASE_URL}/chat/conversations`;
 const TOKEN_KEY = "ai_chat_token";
-
-export type ChatSseEventType = "meta" | "delta" | "done" | "error";
-
-export interface ChatSseEvent {
-  event: ChatSseEventType;
-  data: Record<string, unknown>;
-}
+type ApiResponse<T> = {
+  code: number;
+  message: string;
+  data: T;
+};
 
 function getAccessToken() {
   if (typeof window === "undefined") {
@@ -18,6 +23,18 @@ function getAccessToken() {
   }
 
   return localStorage.getItem(TOKEN_KEY);
+}
+
+function buildAuthHeaders() {
+  const token = getAccessToken();
+
+  if (!token) {
+    throw new Error("登录状态已失效，请重新登录");
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
 }
 
 function parseSseChunk(chunk: string) {
@@ -108,18 +125,32 @@ async function consumeSseStream(
   }
 }
 
-async function createChatStream(request: chatStreanRequest) {
-  const token = getAccessToken();
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  const responseData = (await response.json()) as ApiResponse<T> | {
+    message?: string;
+  };
 
-  if (!token) {
-    throw new Error("登录状态已失效，请重新登录");
+  if (!response.ok) {
+    const message =
+      "message" in responseData && typeof responseData.message === "string"
+        ? responseData.message
+        : `请求失败 (${response.status})`;
+    throw new Error(message);
   }
 
+  if (!("data" in responseData)) {
+    throw new Error("响应数据格式错误");
+  }
+
+  return responseData.data;
+}
+
+async function createChatStream(request: ChatStreamRequest) {
   const response = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      ...buildAuthHeaders(),
     },
     credentials: "include",
     body: JSON.stringify(request),
@@ -141,10 +172,47 @@ async function createChatStream(request: chatStreanRequest) {
   throw new Error(errorMessage);
 }
 
-export async function chatService(
-  request: chatStreanRequest,
+async function fetchConversationList(pageNo: number, pageSize: number) {
+  const url = new URL(CONVERSATIONS_ENDPOINT);
+  url.searchParams.set("pageNo", String(pageNo));
+  url.searchParams.set("pageSize", String(pageSize));
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      ...buildAuthHeaders(),
+    },
+    credentials: "include",
+  });
+
+  return parseJsonResponse<ConversationListResponse>(response);
+}
+
+async function fetchConversationDetail(conversationId: string) {
+  const response = await fetch(
+    `${CONVERSATIONS_ENDPOINT}/${encodeURIComponent(conversationId)}`,
+    {
+      method: "GET",
+      headers: {
+        ...buildAuthHeaders(),
+      },
+      credentials: "include",
+    },
+  );
+
+  return parseJsonResponse<ConversationDetail>(response);
+}
+
+async function streamConversation(
+  request: ChatStreamRequest,
   onEvent: (event: ChatSseEvent) => void,
 ) {
   const response = await createChatStream(request);
   await consumeSseStream(response, onEvent);
 }
+
+export const chatService = {
+  listConversations: fetchConversationList,
+  getConversationDetail: fetchConversationDetail,
+  streamConversation,
+};

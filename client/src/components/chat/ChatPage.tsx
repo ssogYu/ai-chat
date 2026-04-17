@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MessageList } from "@/components/chat/MessageList";
@@ -9,15 +10,21 @@ import { Icons } from "@/components/ui/Icons";
 
 export function ChatPage() {
   const {
+    initialize,
     isSidebarOpen,
     toggleSidebar,
-    chatMessage,
+    currentSessionTitle,
+    messages,
     chatLoading,
-    chatError,
-    clearChatError,
+    isLoadingConversation,
+    createNewConversation,
   } = useChatStore();
 
-  const hasMessages = chatMessage.length > 0;
+  useEffect(() => {
+    void initialize();
+  }, [initialize]);
+
+  const hasMessages = messages.length > 0;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -33,9 +40,25 @@ export function ChatPage() {
                 <Icons.panelLeftOpen className="h-4 w-4" />
               </button>
             )}
+            <div className="hidden min-w-0 sm:block">
+              <p className="truncate text-sm font-medium text-foreground">
+                {currentSessionTitle}
+              </p>
+              <p className="text-xs text-foreground-muted">
+                {isLoadingConversation && "正在加载会话内容"}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={createNewConversation}
+              className="hidden items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground transition-colors hover:bg-secondary sm:flex"
+            >
+              <Icons.plus className="h-4 w-4" />
+              新建会话
+            </button>
             {chatLoading && (
               <div className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-sm text-foreground-muted">
                 <Icons.loader className="h-4 w-4 animate-spin" />
@@ -48,23 +71,14 @@ export function ChatPage() {
 
         <main className="flex flex-1 overflow-hidden">
           <div className="flex flex-1 flex-col overflow-hidden">
-            {chatError && (
-              <div className="border-b border-border bg-destructive/10 px-4 py-3">
-                <div className="mx-auto flex max-w-4xl items-start justify-between gap-3 rounded-xl border border-destructive/20 bg-background px-4 py-3 text-sm">
-                  <div className="flex items-start gap-2 text-foreground">
-                    <Icons.alertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                    <span>{chatError}</span>
-                  </div>
-                  <button
-                    onClick={clearChatError}
-                    className="text-foreground-muted transition-colors hover:text-foreground"
-                  >
-                    <Icons.x className="h-4 w-4" />
-                  </button>
+            {isLoadingConversation ? (
+              <div className="flex flex-1 items-center justify-center px-4">
+                <div className="flex flex-col items-center gap-3 text-foreground-muted">
+                  <Icons.loader className="h-6 w-6 animate-spin" />
+                  <p className="text-sm">正在加载会话内容</p>
                 </div>
               </div>
-            )}
-            {hasMessages ? (
+            ) : hasMessages ? (
               <>
                 <MessageList />
                 <ChatInput />

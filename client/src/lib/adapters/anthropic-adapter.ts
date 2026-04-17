@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AIModelAdapter, UnifiedChatRequest } from "@/types";
 export class AnthropicAdapter implements AIModelAdapter {
   provider = "anthropic";

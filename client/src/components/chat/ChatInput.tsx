@@ -28,6 +28,7 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
     toggleWebSearch,
     addAttachedFile,
     removeAttachedFile,
+    chatLoading,
     chat,
   } = useChatStore();
 
@@ -44,9 +45,9 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
   }, [input, adjustHeight]);
 
   const handleSubmit = async () => {
-    if (!input.trim() && attachedFiles.length === 0) return;
+    if ((!input.trim() && attachedFiles.length === 0) || chatLoading) return;
     try {
-      chat(input);
+      await chat(input);
       setInput("");
 
       if (textareaRef.current) {
@@ -181,11 +182,13 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
 
             <button
               onClick={toggleWebSearch}
+              disabled={chatLoading}
               className={cn(
                 "flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors",
                 webSearchEnabled
                   ? "bg-accent text-accent-foreground"
                   : "text-foreground-muted hover:bg-secondary hover:text-foreground",
+                chatLoading && "cursor-not-allowed opacity-60",
               )}
               title="联网搜索"
             >
@@ -195,15 +198,19 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
           </div>
           <button
             onClick={handleSubmit}
-            disabled={!input.trim() && attachedFiles.length === 0}
+            disabled={(!input.trim() && attachedFiles.length === 0) || chatLoading}
             className={cn(
               "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all",
-              input.trim() || attachedFiles.length > 0
+              (input.trim() || attachedFiles.length > 0) && !chatLoading
                 ? "bg-primary text-primary-foreground hover:bg-primary-hover active:scale-95"
                 : "bg-secondary text-foreground-muted",
             )}
           >
-            <Icons.send className="h-5 w-5" />
+            {chatLoading ? (
+              <Icons.loader className="h-5 w-5 animate-spin" />
+            ) : (
+              <Icons.send className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
