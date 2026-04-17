@@ -22,9 +22,6 @@ interface ChatStore {
   currentSessionTitle: string;
   messages: LlmMessage[];
   activeMessageId: string | null;
-  artifacts: Artifact[];
-  activeArtifactId: string | null;
-  isArtifactsOpen: boolean;
   isSidebarOpen: boolean;
   webSearchEnabled: boolean;
   attachedFiles: File[];
@@ -44,16 +41,10 @@ interface ChatStore {
   selectSession: (sessionId: string) => Promise<void>;
   createNewConversation: () => void;
   chat: (input: string) => Promise<void>;
-  toggleArtifacts: () => void;
-  setActiveArtifact: (artifactId: string | null) => void;
-  removeArtifact: (artifactId: string) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleWebSearch: () => void;
   setWebSearchEnabled: (enabled: boolean) => void;
-  addAttachedFile: (file: File) => void;
-  removeAttachedFile: (index: number) => void;
-  clearAttachedFiles: () => void;
 }
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -107,9 +98,7 @@ export const useChatStore = create<ChatStore>()(
       // 当前对话消息记录列表
       messages: [],
       activeMessageId: null,
-      artifacts: [],
       activeArtifactId: null,
-      isArtifactsOpen: false,
       isSidebarOpen: true,
 
       webSearchEnabled: false,
@@ -155,6 +144,7 @@ export const useChatStore = create<ChatStore>()(
             isLoadingSessions: false,
           });
 
+          //缓存里面取currentSessionId
           if (currentSessionId) {
             await getState().selectSession(currentSessionId);
           }
@@ -262,9 +252,6 @@ export const useChatStore = create<ChatStore>()(
           currentSessionTitle: "新对话",
           messages: [],
           activeMessageId: null,
-          artifacts: [],
-          activeArtifactId: null,
-          isArtifactsOpen: false,
         });
       },
 
@@ -432,33 +419,6 @@ export const useChatStore = create<ChatStore>()(
         }
       },
 
-      toggleArtifacts: () => {
-        set((state) => ({ isArtifactsOpen: !state.isArtifactsOpen }));
-      },
-
-      setActiveArtifact: (artifactId) => {
-        set({ activeArtifactId: artifactId });
-      },
-
-      removeArtifact: (artifactId) => {
-        set((state) => {
-          const nextArtifacts = state.artifacts.filter(
-            (artifact) => artifact.id !== artifactId,
-          );
-          const nextActiveArtifactId =
-            state.activeArtifactId === artifactId
-              ? (nextArtifacts[0]?.id ?? null)
-              : state.activeArtifactId;
-
-          return {
-            artifacts: nextArtifacts,
-            activeArtifactId: nextActiveArtifactId,
-            isArtifactsOpen:
-              nextArtifacts.length > 0 ? state.isArtifactsOpen : false,
-          };
-        });
-      },
-
       toggleSidebar: () => {
         set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
       },
@@ -473,22 +433,6 @@ export const useChatStore = create<ChatStore>()(
 
       setWebSearchEnabled: (enabled) => {
         set({ webSearchEnabled: enabled });
-      },
-
-      addAttachedFile: (file) => {
-        set((state) => ({
-          attachedFiles: [...state.attachedFiles, file],
-        }));
-      },
-
-      removeAttachedFile: (index) => {
-        set((state) => ({
-          attachedFiles: state.attachedFiles.filter((_, i) => i !== index),
-        }));
-      },
-
-      clearAttachedFiles: () => {
-        set({ attachedFiles: [] });
       },
     }),
     {
