@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsEnum,
   IsNumber,
   IsNotEmpty,
@@ -13,8 +14,15 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LLM_PROVIDER_VALUES } from '../../llm/llm.types';
-import type { LlmProvider, LlmRole } from '../../llm/llm.types';
+import {
+  LLM_PROVIDER_VALUES,
+  LLM_REASONING_EFFORT_VALUES,
+} from '../../llm/llm.types';
+import type {
+  LlmProvider,
+  LlmReasoningEffort,
+  LlmRole,
+} from '../../llm/llm.types';
 
 const LLM_ROLE_VALUES: LlmRole[] = ['system', 'user', 'assistant'];
 
@@ -34,6 +42,38 @@ export class ChatMessageDto {
   @IsString()
   @IsNotEmpty()
   content!: string;
+}
+
+export class ChatReasoningDto {
+  @ApiPropertyOptional({
+    description: '是否开启模型思考过程输出',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @ApiPropertyOptional({
+    enum: LLM_REASONING_EFFORT_VALUES,
+    description: '思考强度',
+    example: 'medium',
+  })
+  @IsOptional()
+  @IsEnum(LLM_REASONING_EFFORT_VALUES)
+  effort?: LlmReasoningEffort;
+
+  @ApiPropertyOptional({
+    description: '思考预算 token，仅对部分厂商生效',
+    minimum: 0,
+    maximum: 32000,
+    example: 2048,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(32000)
+  budgetTokens?: number;
 }
 
 export class ChatStreamDto {
@@ -97,6 +137,15 @@ export class ChatStreamDto {
   @Min(1)
   @Max(32000)
   maxTokens?: number;
+
+  @ApiPropertyOptional({
+    type: ChatReasoningDto,
+    description: '统一的思考过程配置，后端按不同 provider 自动映射',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ChatReasoningDto)
+  reasoning?: ChatReasoningDto;
 
   @ApiProperty({
     type: [ChatMessageDto],

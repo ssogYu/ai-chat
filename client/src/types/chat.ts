@@ -8,10 +8,24 @@ export const LLM_PROVIDER_VALUES = [
 
 export type LlmProvider = (typeof LLM_PROVIDER_VALUES)[number];
 export type LlmRole = "system" | "user" | "assistant";
+export const LLM_REASONING_EFFORT_VALUES = [
+  "low",
+  "medium",
+  "high",
+  "max",
+] as const;
+export type LlmReasoningEffort = (typeof LLM_REASONING_EFFORT_VALUES)[number];
 
 export type LlmMessage = {
   role: LlmRole;
   content: string;
+  thinkingContent?: string;
+};
+
+export type LlmReasoningConfig = {
+  enabled?: boolean;
+  effort?: LlmReasoningEffort;
+  budgetTokens?: number;
 };
 
 export type ConversationStatus = "active" | "archived";
@@ -63,10 +77,16 @@ export type ChatStreamRequest = {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  reasoning?: LlmReasoningConfig;
   messages: LlmMessage[];
 };
 
-export type ChatSseEventType = "meta" | "delta" | "done" | "error";
+export type ChatSseEventType =
+  | "meta"
+  | "delta"
+  | "reasoning"
+  | "done"
+  | "error";
 
 export type ChatSseEvent = {
   event: ChatSseEventType;

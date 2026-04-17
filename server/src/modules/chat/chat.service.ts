@@ -62,20 +62,32 @@ export class ChatService {
     let assistantContent = '';
 
     try {
-      for await (const text of this.llmService.streamText(
+      for await (const chunk of this.llmService.streamText(
         {
           ...payload,
           messages: conversation.messages,
         },
         signal,
       )) {
-        assistantContent += text;
+        if (chunk.type === 'reasoning') {
+          yield {
+            event: 'reasoning',
+            data: {
+              requestId,
+              conversationId: conversation.conversationId,
+              text: chunk.text,
+            },
+          };
+          continue;
+        }
+
+        assistantContent += chunk.text;
         yield {
           event: 'delta',
           data: {
             requestId,
             conversationId: conversation.conversationId,
-            text,
+            text: chunk.text,
           },
         };
       }

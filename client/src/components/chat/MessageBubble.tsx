@@ -13,7 +13,7 @@ interface MessageBubbleProps {
 function ThinkingBlock({ content }: { content: string }) {
   const [isExpanded, setIsExpanded] = useState(true);
   return (
-    <div className="mb-3 overflow-hidden rounded-lg border border-border bg-secondary">
+    <div className="mb-3 overflow-hidden rounded-lg border border-border bg-secondary max-w-[85%]">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-foreground-muted transition-colors hover:bg-secondary-hover"
@@ -40,6 +40,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const [copied, setCopied] = useState(false);
 
   const isUser = message.role === "user";
+  const hasThinking = !isUser && Boolean(message.thinkingContent?.trim());
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message?.content || "");
@@ -70,9 +71,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
 
       <div className={cn("flex-1", isUser && "flex flex-col items-end")}>
-        {/* {message.thinkingContent && (
-          <ThinkingBlock content={message?.thinkingContent || ""} />
-        )} */}
+        {hasThinking && (
+          <ThinkingBlock content={message.thinkingContent || ""} />
+        )}
 
         <div
           className={cn(

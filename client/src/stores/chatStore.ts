@@ -4,6 +4,7 @@ import type {
   ConversationDetail,
   ConversationListItem,
   LlmMessage,
+  LlmReasoningEffort,
 } from "@/types/chat";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
@@ -24,6 +25,8 @@ interface ChatStore {
   activeMessageId: string | null;
   isSidebarOpen: boolean;
   webSearchEnabled: boolean;
+  reasoningEnabled: boolean;
+  reasoningEffort: LlmReasoningEffort;
   attachedFiles: File[];
   hasInitialized: boolean;
   isInitializing: boolean;
@@ -45,6 +48,8 @@ interface ChatStore {
   setSidebarOpen: (open: boolean) => void;
   toggleWebSearch: () => void;
   setWebSearchEnabled: (enabled: boolean) => void;
+  toggleReasoning: () => void;
+  setReasoningEffort: (effort: LlmReasoningEffort) => void;
 }
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -102,6 +107,8 @@ export const useChatStore = create<ChatStore>()(
       isSidebarOpen: true,
 
       webSearchEnabled: false,
+      reasoningEnabled: true,
+      reasoningEffort: "medium",
       attachedFiles: [],
       hasInitialized: false,
       isInitializing: false,
@@ -257,8 +264,14 @@ export const useChatStore = create<ChatStore>()(
       },
 
       chat: async (input: string) => {
-        const { messages, chatLoading, currentSessionId, currentSessionTitle } =
-          getState();
+        const {
+          messages,
+          chatLoading,
+          currentSessionId,
+          currentSessionTitle,
+          reasoningEnabled,
+          reasoningEffort,
+        } = getState();
         const trimmedInput = input.trim();
 
         if (!trimmedInput || chatLoading) {
@@ -277,9 +290,14 @@ export const useChatStore = create<ChatStore>()(
               : buildConversationTitle(trimmedInput),
           provider: "ollama",
           model: "gpt-oss:latest",
+          reasoning: {
+            enabled: reasoningEnabled,
+            effort: reasoningEffort,
+          },
           messages: nextMessages,
         };
         let assistantContent = "";
+        let assistantThinkingContent = "";
         let resolvedConversationId = currentSessionId;
         const optimisticTitle =
           currentSessionId === null
@@ -327,10 +345,32 @@ export const useChatStore = create<ChatStore>()(
               const assistantMessage: LlmMessage = {
                 role: "assistant",
                 content: assistantContent,
+                thinkingContent: assistantThinkingContent || undefined,
               };
 
               set({
                 messages: [...nextMessages, assistantMessage],
+              });
+            }
+
+            if (event.event === "reasoning") {
+              const text = event.data.text;
+
+              if (typeof text !== "string") {
+                return;
+              }
+
+              assistantThinkingContent += text;
+
+              set({
+                messages: [
+                  ...nextMessages,
+                  {
+                    role: "assistant",
+                    content: assistantContent,
+                    thinkingContent: assistantThinkingContent,
+                  },
+                ],
               });
             }
 
@@ -377,6 +417,7 @@ export const useChatStore = create<ChatStore>()(
                   {
                     role: "assistant",
                     content: assistantContent,
+                    thinkingContent: assistantThinkingContent || undefined,
                   },
                 ]
               : [
@@ -436,6 +477,14 @@ export const useChatStore = create<ChatStore>()(
       setWebSearchEnabled: (enabled) => {
         set({ webSearchEnabled: enabled });
       },
+
+      toggleReasoning: () => {
+        set((state) => ({ reasoningEnabled: !state.reasoningEnabled }));
+      },
+
+      setReasoningEffort: (effort) => {
+        set({ reasoningEffort: effort });
+      },
     }),
     {
       name: "chat-store",
@@ -444,6 +493,8 @@ export const useChatStore = create<ChatStore>()(
         currentSessionId: state.currentSessionId,
         isSidebarOpen: state.isSidebarOpen,
         webSearchEnabled: state.webSearchEnabled,
+        reasoningEnabled: state.reasoningEnabled,
+        reasoningEffort: state.reasoningEffort,
       }),
     },
   ),

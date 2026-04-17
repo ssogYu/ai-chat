@@ -1,10 +1,11 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
-import { LlmProvider } from '../llm.types';
+import { LlmProvider, type LlmReasoningConfig } from '../llm.types';
 
 export interface LlmModelOptions {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  reasoning?: LlmReasoningConfig;
 }
 
 export interface LlmProviderAdapter {

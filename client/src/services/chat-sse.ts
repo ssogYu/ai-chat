@@ -95,7 +95,6 @@ async function consumeSseStream(
     }
 
     buffer += decoder.decode(value, { stream: true });
-    console.log(buffer, "buffer");
     const { events, rest } = parseSseChunk(buffer);
     buffer = rest;
 

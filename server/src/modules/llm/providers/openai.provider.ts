@@ -23,6 +23,20 @@ export class OpenAiProvider implements LlmProviderAdapter {
       model: options.model,
       temperature: options.temperature,
       maxTokens: options.maxTokens,
+      reasoning:
+        options.reasoning?.enabled && options.reasoning.effort
+          ? { effort: this.toOpenAiReasoningEffort(options.reasoning.effort) }
+          : undefined,
     });
+  }
+
+  private toOpenAiReasoningEffort(
+    effort: NonNullable<LlmModelOptions['reasoning']>['effort'],
+  ) {
+    if (!effort || effort === 'max') {
+      return 'high';
+    }
+
+    return effort;
   }
 }

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback, DragEvent } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { Icons } from "@/components/ui/Icons";
 import { cn } from "@/lib/utils";
+import { LLM_REASONING_EFFORT_VALUES } from "@/types/chat";
 
 interface ChatInputProps {
   showBorder?: boolean;
@@ -18,6 +19,10 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
     webSearchEnabled,
     attachedFiles,
     toggleWebSearch,
+    reasoningEnabled,
+    reasoningEffort,
+    toggleReasoning,
+    setReasoningEffort,
     chatLoading,
     chat,
   } = useChatStore();
@@ -66,11 +71,19 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
     setIsDragOver(false);
   };
 
-  const getFileIcon = (file: File) => {
-    if (file.type.startsWith("image/")) return Icons.image;
-    if (file.type === "application/pdf") return Icons.fileText;
-    return Icons.fileText;
+  const handleCycleReasoningEffort = () => {
+    const cycleValues = LLM_REASONING_EFFORT_VALUES.slice(0, 3);
+    const currentIndex = cycleValues.indexOf(reasoningEffort);
+    const nextIndex = (currentIndex + 1) % cycleValues.length;
+    setReasoningEffort(cycleValues[nextIndex]);
   };
+
+  const reasoningLabelMap = {
+    low: "浅度思考",
+    medium: "中度思考",
+    high: "深度思考",
+    max: "极致思考",
+  } as const;
 
   return (
     <div
@@ -83,6 +96,8 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
         className={cn(
           "relative rounded-3xl border bg-input/85 shadow-sm backdrop-blur-md transition-all",
           "border-input-border focus-within:border-input-focus focus-within:shadow-md",
+          isDragOver &&
+            "border-primary/60 bg-input shadow-md ring-2 ring-primary/15",
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -113,6 +128,35 @@ export function ChatInput({ showBorder = true }: ChatInputProps) {
               <Icons.globe className="h-4 w-4" />
               <span className="hidden sm:inline">联网搜索</span>
             </button>
+            {/* <button
+              onClick={toggleReasoning}
+              disabled={chatLoading}
+              className={cn(
+                "flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-medium transition-colors",
+                reasoningEnabled
+                  ? "bg-primary/12 text-primary shadow-sm"
+                  : "text-foreground-muted hover:bg-secondary hover:text-foreground",
+                chatLoading && "cursor-not-allowed opacity-60",
+              )}
+              title="展示模型思考过程"
+            >
+              <Icons.sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">思考过程</span>
+            </button> */}
+            {/* {reasoningEnabled && (
+              <button
+                onClick={handleCycleReasoningEffort}
+                disabled={chatLoading}
+                className={cn(
+                  "hidden h-9 items-center gap-1.5 rounded-xl border border-border bg-background/80 px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary sm:flex",
+                  chatLoading && "cursor-not-allowed opacity-60",
+                )}
+                title="切换思考强度"
+              >
+                <Icons.zap className="h-4 w-4" />
+                <span>{reasoningLabelMap[reasoningEffort]}</span>
+              </button>
+            )} */}
           </div>
           <button
             onClick={handleSubmit}
