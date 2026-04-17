@@ -1,4 +1,4 @@
-import { chatService } from "@/services";
+import { chatService, chatSSEService } from "@/services";
 import type {
   ChatStreamRequest,
   ConversationDetail,
@@ -128,7 +128,7 @@ export const useChatStore = create<ChatStore>()(
         });
 
         try {
-          const response = await chatService.listConversations(
+          const { data: response } = await chatService.fetchConversationList(
             1,
             sessionsPageSize,
           );
@@ -176,7 +176,7 @@ export const useChatStore = create<ChatStore>()(
 
         try {
           const nextPageNo = sessionsPageNo + 1;
-          const response = await chatService.listConversations(
+          const { data: response } = await chatService.fetchConversationList(
             nextPageNo,
             sessionsPageSize,
           );
@@ -218,7 +218,8 @@ export const useChatStore = create<ChatStore>()(
         });
 
         try {
-          const detail = await chatService.getConversationDetail(sessionId);
+          const { data: detail } =
+            await chatService.fetchConversationDetail(sessionId);
 
           set((state) => ({
             currentSessionId: detail.id,
@@ -292,7 +293,7 @@ export const useChatStore = create<ChatStore>()(
         });
 
         try {
-          await chatService.streamConversation(requestMessage, (event) => {
+          await chatSSEService.streamConversation(requestMessage, (event) => {
             if (event.event === "meta") {
               const conversationId = event.data.conversationId;
 
@@ -344,7 +345,7 @@ export const useChatStore = create<ChatStore>()(
           });
 
           if (resolvedConversationId) {
-            const detail = await chatService.getConversationDetail(
+            const { data: detail } = await chatService.fetchConversationDetail(
               resolvedConversationId,
             );
 
@@ -389,9 +390,10 @@ export const useChatStore = create<ChatStore>()(
 
           if (resolvedConversationId) {
             try {
-              const detail = await chatService.getConversationDetail(
-                resolvedConversationId,
-              );
+              const { data: detail } =
+                await chatService.fetchConversationDetail(
+                  resolvedConversationId,
+                );
               set((state) => ({
                 currentSessionId: detail.id,
                 currentSessionTitle: detail.title,
