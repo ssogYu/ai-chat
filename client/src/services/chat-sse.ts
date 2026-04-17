@@ -81,7 +81,6 @@ async function consumeSseStream(
   onEvent: (event: ChatSseEvent) => void,
 ) {
   const reader = response.body?.getReader();
-
   if (!reader) {
     throw new Error("当前环境不支持流式响应");
   }
@@ -91,12 +90,12 @@ async function consumeSseStream(
 
   while (true) {
     const { done, value } = await reader.read();
-
     if (done) {
       break;
     }
 
     buffer += decoder.decode(value, { stream: true });
+    console.log(buffer, "buffer");
     const { events, rest } = parseSseChunk(buffer);
     buffer = rest;
 
