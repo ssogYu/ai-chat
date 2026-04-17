@@ -4,6 +4,8 @@ import {
   NestModule,
   RequestMethod,
 } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AccessTokenGuard } from './common/guards';
 import { LoggerMiddleware } from './common/middlewares';
 import { CoreModule } from './core/core.module';
 import { PrismaModule } from './database/prisma/prisma.module';
@@ -14,7 +16,12 @@ import { UsersModule } from './modules/users/users.module';
 @Module({
   imports: [CoreModule, PrismaModule, AuthModule, UsersModule, ChatModule],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: AccessTokenGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

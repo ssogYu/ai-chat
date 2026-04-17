@@ -1,14 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -22,7 +13,6 @@ import {
 } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { AccessTokenGuard } from '../../common/guards';
 import { ChatStreamDto } from './dto/chat-stream.dto';
 import { ConversationListQueryDto } from './dto/conversation-query.dto';
 import {
@@ -39,7 +29,6 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '分页获取当前用户的会话列表' })
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: ConversationListResponseDto })
@@ -53,7 +42,6 @@ export class ChatController {
   }
 
   @Get('conversations/:conversationId')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '获取单条会话详情及完整消息记录' })
   @ApiBearerAuth('access-token')
   @ApiParam({ name: 'conversationId', description: '会话 ID' })
@@ -69,7 +57,6 @@ export class ChatController {
   }
 
   @Post('stream')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: 'SSE 流式对话' })
   @ApiBearerAuth('access-token')
   @ApiConsumes('application/json')

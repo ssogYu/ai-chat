@@ -10,7 +10,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { AccessTokenGuard, RefreshTokenGuard } from '../../common/guards';
+import { IsPublic } from '../../common/decorators/is-public.decorator';
+import { RefreshTokenGuard } from '../../common/guards';
 import { UsersService } from '../users/users.service';
 import { AuthResponseDto, LogoutResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
@@ -67,6 +68,7 @@ export class AuthController {
   }
 
   @Post('register')
+  @IsPublic()
   @ApiOperation({ summary: '用户注册' })
   @ApiBody({ type: RegisterDto })
   @ApiOkResponse({ type: AuthResponseDto })
@@ -82,6 +84,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @IsPublic()
   @ApiOperation({ summary: '用户登录' })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ type: AuthResponseDto })
@@ -98,6 +101,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @IsPublic()
   @UseGuards(RefreshTokenGuard)
   @ApiOperation({ summary: '刷新令牌' })
   @ApiBearerAuth('refresh-token')
@@ -115,7 +119,6 @@ export class AuthController {
   }
 
   @Post('logout')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '退出登录' })
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: LogoutResponseDto })
@@ -128,7 +131,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '获取当前登录用户' })
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: UserEntity })

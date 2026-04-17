@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
@@ -6,7 +6,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { AccessTokenGuard } from '../../common/guards';
 import type { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { UserEntity } from './entities/user.entity';
 import { UsersService } from './users.service';
@@ -17,7 +16,6 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: '获取当前用户资料' })
   @ApiBearerAuth('access-token')
   @ApiOkResponse({ type: UserEntity })
