@@ -89,6 +89,7 @@ export const useAuthStore = create<AuthStore>()(
       fetchUser: async () => {
         const token = localStorage.getItem(TOKEN_KEY);
         if (!token) {
+          removeTokenCookie();
           set({ user: null, isAuthenticated: false, isLoading: false });
           return;
         }
@@ -97,7 +98,6 @@ export const useAuthStore = create<AuthStore>()(
           const { data } = await authService.getMe();
           set({ user: data, isAuthenticated: true, isLoading: false });
         } catch (err: any) {
-          console.log("token112", token, err);
           localStorage.removeItem(TOKEN_KEY);
           removeTokenCookie();
           set({ user: null, isAuthenticated: false, isLoading: false });
