@@ -37,8 +37,9 @@ export class AuthService {
         name: registerDto.name?.trim() || null,
         passwordHash,
       });
-
+      //生产refreshToken和accessToken
       const tokens = await this.issueTokens(user.id, user.email);
+      //refreshToken存库
       await this.usersService.updateRefreshTokenHash(
         user.id,
         await this.hashValue(tokens.refreshToken!),

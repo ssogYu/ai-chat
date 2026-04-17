@@ -9,7 +9,6 @@ import { Response } from 'express';
 import type { BaseResponse } from '../interfaces/base-response.interface';
 import { ErrorCodeEnum, ErrorCodeMessageMap } from '../enums/error-code.enum';
 import { ApiException } from '../exceptions/api.exception';
-import { WinstonLoggerService } from 'src/core/logger/winston.server';
 
 const HttpStatusToErrorCodeMap: Record<number, ErrorCodeEnum> = {
   [HttpStatus.BAD_REQUEST]: ErrorCodeEnum.BAD_REQUEST,
